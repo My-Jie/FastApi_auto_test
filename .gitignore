@@ -14,7 +14,6 @@ test.py
 /build
 #/alembic
 /.idea
-*.json
 files/
 allure_report/
 .Python
@@ -36,7 +35,7 @@ wheels/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
-*.egg
+*.egggit
 MANIFEST
 
 # PyInstaller
