@@ -1,0 +1,45 @@
+# 日志输出级别，未设置使用“INFO”
+logger_level: 'INFO'
+# 日志文件输出路径，未设置会在项目根目录下创建logs
+log_path: 'D:/logs/'
+
+# allure总目录，未设置会在项目根目录下创建allure_path和allure_path_ui
+allure_path: 'D:/Works/auto_test/auto_report'
+allure_path_ui: 'D:/Works/auto_test/ui/auto_report'
+
+# host
+# 主要影响生成的allure测试报告的地址，历史数据趋势图的跳转地址，尽量使用统一不变的
+host: 'http://172.16.100.121:8000/'
+
+# 失败马上停止执行
+# 总开关，每个接口会有单独的失败停止配置，都为True时生效
+global_fail_stop: True
+
+# yApi配置信息（暂时没有用到，未来可能会取消掉该项配置
+# 不影响现有功能的使用
+yapi_info:
+  host: ''
+  email: ''
+  password: ''
+
+# 远程浏览器配置
+# 这个是人为确认的，在你部署好selenoid之后
+selenoid:
+  selenoid_hub_host: '192.168.43.49:5555'
+  selenoid_ui_host: '192.168.43.49:8080'
+  browsers:
+    - browser_name: 'chrome'
+      browser_version: 'chrome_104'
+
+# sqlite的文件地址
+sqlite: 'sqlite:///./sqlite/auto_test.sqlite3'
+
+
+# 自动匹配参数的模式（发生在转化为用例时）
+# 一个增强配置，但看代码后发现替换逻辑是在递归方法中，暂未想到好的处理方式
+# 先保留这个配置，后续来增强它的应用
+# all： 按key和value比较，不区分大小写 [推荐]
+# all-diff：按key和value比较，区分大小写
+# key：按key值比较
+# value： 按value值比较 [不推荐]
+auto_extract: 'value'
