@@ -10,7 +10,7 @@
 import os
 import time
 import json
-from typing import List
+from typing import List, Any
 from pydantic import HttpUrl
 from fastapi import APIRouter, UploadFile, Depends, Form, File, Query
 from sqlalchemy.orm import Session
@@ -20,6 +20,9 @@ from starlette.background import BackgroundTask
 from apps import response_code
 from depends import get_db
 
+from apps.case_service import (
+    schemas as service_schemas
+)
 from apps.template import crud, schemas
 from apps.case_service import schemas as case_schemas
 from apps.case_service import crud as case_crud
@@ -27,7 +30,7 @@ from apps.template.tool import ParseData, check_num, GenerateCase, InsertTempDat
 from apps.case_service.tool import refresh, temp_to_case
 from apps.whole_conf import crud as conf_crud
 from tools import CreateExcel, OperationJson
-from .tool import send_api
+from .tool import send_api, get_jsonpath
 
 template = APIRouter()
 
@@ -652,6 +655,26 @@ async def del_api(temp_id: int, number: int, db: Session = Depends(get_db)):
 )
 async def send_api_info(api_info: schemas.TemplateDataInTwo, get_cookie: bool):
     return await send_api(api_info=api_info, get_cookie=get_cookie)
+
+
+@template.get(
+    '/response/jsonpath/list',
+    name='调试接口获取jsonpath'
+)
+async def get_jsonpath_list(
+        temp_id: int,
+        extract_contents: Any,
+        type_: service_schemas.RepType,
+        key_value: service_schemas.KeyValueType,
+        ext_type: service_schemas.ExtType,
+):
+    return await get_jsonpath(
+        temp_id=temp_id,
+        extract_contents=extract_contents,
+        type_=type_,
+        key_value=key_value,
+        ext_type=ext_type
+    )
 
 
 @template.get(
