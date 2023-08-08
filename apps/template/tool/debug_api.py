@@ -133,6 +133,5 @@ async def get_jsonpath(
             key_value=key_value,
             ext_type=ext_type
         )
-        return value_list if value_list.get('extract_contents') else {}
-    else:
-        return {}
+        return value_list
+    return {'extract_contents': []}
