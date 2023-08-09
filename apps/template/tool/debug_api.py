@@ -10,20 +10,19 @@
 import json
 import aiohttp
 from aiohttp import client_exceptions
+from sqlalchemy.orm import Session
 from apps.template import schemas
 from apps import response_code
 from tools import get_cookie as cookie_info
-from tools import ExtractParamsPath
+from tools import ExtractParamsPath, replace_data, FakerData
 
 RESPONSE_INFO = {}
 COOKIE_INFO = {}
 
 
-async def send_api(api_info: schemas.TemplateDataInTwo, get_cookie: bool):
+async def send_api(api_info: schemas.TemplateDataInTwo, get_cookie: bool, db: Session = None):
     """
     调试接口专用方法
-    :param api_info:
-    :param get_cookie:
     :return:
     """
     api_info.headers = {k.title(): v for k, v in api_info.headers.items() if k.lower() != 'content-length'}
@@ -32,12 +31,52 @@ async def send_api(api_info: schemas.TemplateDataInTwo, get_cookie: bool):
         if api_info.headers.get('Cookie'):
             api_info.headers['Cookie'] = COOKIE_INFO[f"{api_info.temp_id}_{api_info.host}"]
 
+    fk = FakerData()
+    # 识别url表达式
+    url = await replace_data.replace_url(
+        db=db,
+        old_str=f"{api_info.host}{api_info.path}",
+        response=RESPONSE_INFO.get(api_info.temp_id, {}).get(api_info.number, {}),
+        faker=fk,
+        code='',
+        extract='',
+        customize={}
+    )
+    # 识别params表达式
+    params = await replace_data.replace_params_data(
+        db=db,
+        data=api_info.params,
+        response=RESPONSE_INFO.get(api_info.temp_id, {}).get(api_info.number, {}),
+        faker=fk,
+        code='',
+        extract='',
+        customize={}
+    )
+    # 识别data表达式
+    data = await replace_data.replace_params_data(
+        db=db,
+        data=api_info.data,
+        response=RESPONSE_INFO.get(api_info.temp_id, {}).get(api_info.number, {}),
+        faker=fk,
+        code='',
+        extract='',
+        customize={}
+    )
+    # 识别headers中的表达式
+    case_header = await replace_data.replace_params_data(
+        db=db,
+        data=api_info.headers,
+        response=RESPONSE_INFO.get(api_info.temp_id, {}).get(api_info.number, {}),
+        faker=fk,
+        customize={}
+    )
+
     req_data = {
-        'url': f"{api_info.host}{api_info.path}",
+        'url': url,
         'method': api_info.method,
-        'headers': api_info.headers,
-        'params': api_info.params,
-        f"{'json' if api_info.json_body == 'json' else 'data'}": api_info.data,
+        'headers': case_header,
+        'params': params,
+        f"{'json' if api_info.json_body == 'json' else 'data'}": data,
     }
     async with aiohttp.ClientSession() as sess:
         try:
@@ -99,6 +138,7 @@ async def save_response(temp_id: int, number: int, res_info: dict, host: str, co
 
 async def get_jsonpath(
         temp_id,
+        number,
         extract_contents,
         type_,
         key_value,
@@ -108,6 +148,9 @@ async def get_jsonpath(
     if RESPONSE_INFO.get(temp_id):
 
         class Data:
+            """
+            模拟的一个数据模型，在调用下面处理函数时方便直接使用
+            """
             number: int
             path: str
             params: dict
@@ -117,6 +160,9 @@ async def get_jsonpath(
 
         temp_data = []
         for k, v in RESPONSE_INFO.get(temp_id).items():
+            if k >= number:
+                continue
+
             d = Data()
             d.number = k
             d.path = v['path']

@@ -30,7 +30,6 @@ from apps.run_case import crud
 from apps.run_case import CASE_STATUS
 from .check_data import check_customize
 from tools import replace_data
-from tools.replace_data import COUNT
 
 
 class RunApi:
@@ -272,7 +271,7 @@ class RunApi:
         :return:
         """
         for k, v in check.items():
-            for x in COUNT:
+            for x in replace_data.COUNT:
                 if isinstance(v, list):
                     if isinstance(v[1], str) and x in v[1]:
                         try:

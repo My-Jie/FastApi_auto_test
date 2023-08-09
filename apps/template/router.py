@@ -663,6 +663,7 @@ async def send_api_info(api_info: schemas.TemplateDataInTwo, get_cookie: bool):
 )
 async def get_jsonpath_list(
         temp_id: int,
+        number: int,
         extract_contents: Any,
         type_: service_schemas.RepType,
         key_value: service_schemas.KeyValueType,
@@ -670,6 +671,7 @@ async def get_jsonpath_list(
 ):
     return await get_jsonpath(
         temp_id=temp_id,
+        number=number,
         extract_contents=extract_contents,
         type_=type_,
         key_value=key_value,
