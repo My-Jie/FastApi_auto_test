@@ -94,7 +94,7 @@ class RunApi:
             logger.debug(f"{'=' * 30}case_id:{case_id},开始请求,number:{num}{'=' * 30}")
             try:
                 # 识别url表达式
-                url = await self._replace_url(
+                url = await replace_url(
                     db=db,
                     old_str=f"{temp_data[num].host}{case_data[num].path}",
                     response=response,
@@ -491,36 +491,6 @@ class RunApi:
             sql_data = await s.select(sql=sql)
             return [x[0] for x in sql_data] if sql_data else False
 
-    @staticmethod
-    async def _replace_url(
-            db: Session,
-            old_str: str,
-            response: list,
-            faker: FakerData,
-            code: str,
-            extract: str,
-            customize: dict
-    ) -> str:
-        """
-        替换url的值
-        :param old_str:
-        :param response:
-        :param faker:
-        :param code:
-        :param extract:
-        :return:
-        """
-        return await header_srt(
-            db=db,
-            x=old_str,
-            response=response,
-            faker=faker,
-            value_type='url',
-            code=code,
-            extract=extract,
-            customize=customize
-        )
-
     async def _replace_headers(self, tmp_header: dict, case_header: dict, tmp_host: str, tmp_file: bool) -> dict:
         """
         替换headers中的内容
@@ -547,6 +517,30 @@ class RunApi:
             del tmp_header['Content-Length']
 
         return tmp_header
+
+
+async def replace_url(
+        db: Session,
+        old_str: str,
+        response: list,
+        faker: FakerData,
+        code: str,
+        extract: str,
+        customize: dict
+) -> str:
+    """
+    替换url的值
+    """
+    return await header_srt(
+        db=db,
+        x=old_str,
+        response=response,
+        faker=faker,
+        value_type='url',
+        code=code,
+        extract=extract,
+        customize=customize
+    )
 
 
 async def replace_params_data(
