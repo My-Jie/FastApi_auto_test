@@ -104,7 +104,7 @@ class RunApi:
                     customize=customize
                 )
                 # 识别params表达式
-                params = await self._replace_params_data(
+                params = await replace_params_data(
                     db=db,
                     data=case_data[num].params,
                     response=response,
@@ -114,7 +114,7 @@ class RunApi:
                     customize=customize
                 )
                 # 识别data表达式
-                data = await self._replace_params_data(
+                data = await replace_params_data(
                     db=db,
                     data=case_data[num].data,
                     response=response,
@@ -124,7 +124,7 @@ class RunApi:
                     customize=customize
                 )
                 # 识别headers中的表达式
-                case_header = await self._replace_params_data(
+                case_header = await replace_params_data(
                     db=db,
                     data=case_data[num].headers,
                     response=response,
@@ -132,7 +132,7 @@ class RunApi:
                     customize=customize
                 )
                 # 识别校验的数据
-                check = await self._replace_params_data(
+                check = await replace_params_data(
                     db=db,
                     data=case_data[num].check,
                     response=response,
@@ -521,88 +521,6 @@ class RunApi:
             customize=customize
         )
 
-    @staticmethod
-    async def _replace_params_data(
-            db: Session,
-            data: [dict, list],
-            response: list,
-            faker: FakerData,
-            code: str = None,
-            extract: str = '',
-            customize: dict = None
-    ) -> dict:
-        """
-        替换params和data的值
-        :param data:
-        :param response:
-        :param code:
-        :param extract:
-        :return:
-        """
-
-        async def handle_value(data_json):
-
-            if isinstance(data_json, list):
-                return [await handle_value(x) for x in data_json]
-
-            if isinstance(data_json, str):
-                return await header_srt(
-                    db=db,
-                    x=data_json,
-                    response=response,
-                    faker=faker,
-                    code=code,
-                    extract=extract,
-                    customize=customize
-                )
-
-            target = {}
-            if not data_json:
-                return target
-            for key in data_json.keys():
-                if isinstance(data_json[key], str):
-                    target[key] = await header_srt(
-                        db=db,
-                        x=data_json[key],
-                        response=response,
-                        faker=faker,
-                        code=code,
-                        extract=extract,
-                        customize=customize
-                    )
-                    continue
-
-                if isinstance(data_json[key], dict):
-                    target[key] = await handle_value(data_json[key])
-                    continue
-
-                if isinstance(data_json[key], list):
-                    new_list = []
-                    for x in data_json[key]:
-                        if isinstance(x, (list, dict)):
-                            new_list.append(await handle_value(x))
-                        elif isinstance(x, str):
-                            new_list.append(await header_srt(
-                                db=db,
-                                x=x,
-                                response=response,
-                                faker=faker,
-                                code=code,
-                                extract=extract,
-                                customize=customize
-                            ))
-                        else:
-                            new_list.append(x)
-
-                    target[key] = new_list
-                    continue
-
-                target[key] = data_json[key]
-
-            return target
-
-        return await handle_value(data)
-
     async def _replace_headers(self, tmp_header: dict, case_header: dict, tmp_host: str, tmp_file: bool) -> dict:
         """
         替换headers中的内容
@@ -629,6 +547,83 @@ class RunApi:
             del tmp_header['Content-Length']
 
         return tmp_header
+
+
+async def replace_params_data(
+        db: Session,
+        data: [dict, list],
+        response: list,
+        faker: FakerData,
+        code: str = None,
+        extract: str = '',
+        customize: dict = None
+) -> dict:
+    """
+    替换params和data的值
+    """
+
+    async def handle_value(data_json):
+
+        if isinstance(data_json, list):
+            return [await handle_value(x) for x in data_json]
+
+        if isinstance(data_json, str):
+            return await header_srt(
+                db=db,
+                x=data_json,
+                response=response,
+                faker=faker,
+                code=code,
+                extract=extract,
+                customize=customize
+            )
+
+        target = {}
+        if not data_json:
+            return target
+        for key in data_json.keys():
+            if isinstance(data_json[key], str):
+                target[key] = await header_srt(
+                    db=db,
+                    x=data_json[key],
+                    response=response,
+                    faker=faker,
+                    code=code,
+                    extract=extract,
+                    customize=customize
+                )
+                continue
+
+            if isinstance(data_json[key], dict):
+                target[key] = await handle_value(data_json[key])
+                continue
+
+            if isinstance(data_json[key], list):
+                new_list = []
+                for x in data_json[key]:
+                    if isinstance(x, (list, dict)):
+                        new_list.append(await handle_value(x))
+                    elif isinstance(x, str):
+                        new_list.append(await header_srt(
+                            db=db,
+                            x=x,
+                            response=response,
+                            faker=faker,
+                            code=code,
+                            extract=extract,
+                            customize=customize
+                        ))
+                    else:
+                        new_list.append(x)
+
+                target[key] = new_list
+                continue
+
+            target[key] = data_json[key]
+
+        return target
+
+    return await handle_value(data)
 
 
 async def header_srt(
