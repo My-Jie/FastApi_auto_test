@@ -7,6 +7,7 @@
 @Time: 2023/7/31-22:00
 """
 
+import copy
 import json
 import aiohttp
 from aiohttp import client_exceptions
@@ -20,7 +21,7 @@ RESPONSE_INFO = {}
 COOKIE_INFO = {}
 
 
-async def send_api(api_info: schemas.TemplateDataInTwo, get_cookie: bool, db: Session = None):
+async def send_api(db: Session, api_info: schemas.TemplateDataInTwo, get_cookie: bool):
     """
     调试接口专用方法
     :return:
@@ -31,12 +32,21 @@ async def send_api(api_info: schemas.TemplateDataInTwo, get_cookie: bool, db: Se
         if api_info.headers.get('Cookie'):
             api_info.headers['Cookie'] = COOKIE_INFO[f"{api_info.temp_id}_{api_info.host}"]
 
+    # 处理下response数据格式
+    temp_info = RESPONSE_INFO.get(api_info.temp_id, {})
+    temp_list = []
+    for i in range(api_info.number):
+        if temp_info.get(i):
+            temp_list.append(temp_info.get(i, {}).get('response', {}))
+        else:
+            temp_list.append({})
+
     fk = FakerData()
     # 识别url表达式
     url = await replace_data.replace_url(
         db=db,
         old_str=f"{api_info.host}{api_info.path}",
-        response=RESPONSE_INFO.get(api_info.temp_id, {}).get(api_info.number, {}),
+        response=temp_list,
         faker=fk,
         code='',
         extract='',
@@ -46,7 +56,7 @@ async def send_api(api_info: schemas.TemplateDataInTwo, get_cookie: bool, db: Se
     params = await replace_data.replace_params_data(
         db=db,
         data=api_info.params,
-        response=RESPONSE_INFO.get(api_info.temp_id, {}).get(api_info.number, {}),
+        response=temp_list,
         faker=fk,
         code='',
         extract='',
@@ -56,7 +66,7 @@ async def send_api(api_info: schemas.TemplateDataInTwo, get_cookie: bool, db: Se
     data = await replace_data.replace_params_data(
         db=db,
         data=api_info.data,
-        response=RESPONSE_INFO.get(api_info.temp_id, {}).get(api_info.number, {}),
+        response=temp_list,
         faker=fk,
         code='',
         extract='',
@@ -66,7 +76,7 @@ async def send_api(api_info: schemas.TemplateDataInTwo, get_cookie: bool, db: Se
     case_header = await replace_data.replace_params_data(
         db=db,
         data=api_info.headers,
-        response=RESPONSE_INFO.get(api_info.temp_id, {}).get(api_info.number, {}),
+        response=temp_list,
         faker=fk,
         customize={}
     )
@@ -78,29 +88,29 @@ async def send_api(api_info: schemas.TemplateDataInTwo, get_cookie: bool, db: Se
         'params': params,
         f"{'json' if api_info.json_body == 'json' else 'data'}": data,
     }
+
     async with aiohttp.ClientSession() as sess:
         try:
             async with sess.request(**req_data, allow_redirects=False) as res:
-                try:
-                    res_data = await res.json(content_type='application/json' if not api_info.file else None)
-                except (json.decoder.JSONDecodeError,):
-                    res_data = {}
+                res_data = await res.json(content_type='application/json' if not api_info.file else None)
+        except (json.decoder.JSONDecodeError,):
+            res_data = {}
         except (client_exceptions.ContentTypeError, client_exceptions.ClientConnectorError,):
             res_data = {}
         except Exception as e:
             res_data = f"{str(e)}"
 
-        cookie = await cookie_info(rep_type='aiohttp', response=res) if get_cookie else ''
+        cookie = await cookie_info(rep_type='aiohttp', response=res) if get_cookie else case_header['Cookie']
 
         res_info = {
             'status': res.status,
-            'path': api_info.path,
-            'params': api_info.params,
-            'data': api_info.data,
-            'request-headers': api_info.headers,
+            'path': url,
+            'params': params,
+            'data': data,
+            'request-headers': case_header,
             'response-headers': dict(res.headers),
             'response': res_data,
-            'cookie': cookie if cookie else api_info.headers['Cookie'],
+            'cookie': cookie,
         }
 
         await save_response(
@@ -128,12 +138,11 @@ async def save_response(temp_id: int, number: int, res_info: dict, host: str, co
         if RESPONSE_INFO[temp_id].get(number, '_') != '_':
             RESPONSE_INFO[temp_id][number] = res_info
         else:
-            RESPONSE_INFO[temp_id] = {number: res_info}
+            RESPONSE_INFO[temp_id][number] = res_info
     else:
         RESPONSE_INFO[temp_id] = {number: res_info}
 
-    if cookie:
-        COOKIE_INFO[f"{temp_id}_{host}"] = cookie
+    COOKIE_INFO[f"{temp_id}_{host}"] = cookie
 
 
 async def get_jsonpath(
@@ -181,3 +190,19 @@ async def get_jsonpath(
         )
         return value_list
     return {'extract_contents': []}
+
+
+async def del_debug(temp_id: int):
+    """
+    按模板id删除调试的信息
+    :param temp_id:
+    :return:
+    """
+    if RESPONSE_INFO.get(temp_id):
+        del RESPONSE_INFO[temp_id]
+
+    cookie_info_ = copy.deepcopy(COOKIE_INFO)
+    for k, v in cookie_info_.items():
+        id_, _ = k.split('_')
+        if temp_id == int(id_):
+            del COOKIE_INFO[k]

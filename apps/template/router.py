@@ -30,7 +30,7 @@ from apps.template.tool import ParseData, check_num, GenerateCase, InsertTempDat
 from apps.case_service.tool import refresh, temp_to_case
 from apps.whole_conf import crud as conf_crud
 from tools import CreateExcel, OperationJson
-from .tool import send_api, get_jsonpath
+from .tool import send_api, get_jsonpath, del_debug
 
 template = APIRouter()
 
@@ -651,10 +651,9 @@ async def del_api(temp_id: int, number: int, db: Session = Depends(get_db)):
 @template.post(
     '/send/api',
     name='发送测试数据调试',
-
 )
-async def send_api_info(api_info: schemas.TemplateDataInTwo, get_cookie: bool):
-    return await send_api(api_info=api_info, get_cookie=get_cookie)
+async def send_api_info(api_info: schemas.TemplateDataInTwo, get_cookie: bool, db: Session = Depends(get_db)):
+    return await send_api(db=db, api_info=api_info, get_cookie=get_cookie)
 
 
 @template.get(
@@ -677,6 +676,15 @@ async def get_jsonpath_list(
         key_value=key_value,
         ext_type=ext_type
     )
+
+
+@template.delete(
+    '/del/debug/info',
+    name='按temp_id删除掉缓存的调试信息'
+)
+async def del_debug_info(temp_id: int):
+    await del_debug(temp_id=temp_id)
+    return await response_code.resp_200()
 
 
 @template.get(
