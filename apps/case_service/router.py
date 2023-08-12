@@ -771,3 +771,16 @@ async def copy_case(case_id: int, db: Session = Depends(get_db)):
         'data': case_data
     }
     return await insert(db=db, case_name=case_name, temp_id=case_info[0].temp_id, case_data=dict(**case_data))
+
+
+@case_service.get(
+    '/get/response',
+    name='按用例id和number获取历史模板、最新运行用例的response'
+)
+async def get_response(case_id: int, number: int, db: Session = Depends(get_db)):
+    case_info = await crud.get_case_info(db=db, case_id=case_id)
+    if not case_info:
+        return await response_code.resp_404(message='没有获取到这个用例id')
+
+    temp_info = await temp_crud.get_template_data(db=db, temp_id=case_info[0].temp_id, numbers=[number])
+    return temp_info[0].response
