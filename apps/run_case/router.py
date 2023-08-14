@@ -22,7 +22,7 @@ from apps.template import crud
 from apps.case_service import crud as case_crud
 from apps.case_ddt import crud as gather_crud
 from apps.case_ui import crud as ui_crud
-from apps.run_case import schemas, CASE_STATUS, SETTING_INFO_DICT
+from apps.run_case import schemas, CASE_STATUS, SETTING_INFO_DICT, CASE_RESPONSE
 from apps.setting_bind import crud as setting_crud
 from apps.whole_conf import crud as conf_crud
 from .tool import run_service_case, run_ddt_case, run_ui_case, header, replace_playwright, check_customize
@@ -396,3 +396,17 @@ async def set_api_setting_info(
         return await response_code.resp_404(message='没有这个环境数据缓存选项')
 
     return await response_code.resp_200()
+
+
+@run_case.get(
+    '/get/response',
+    name='按用例id和number获取历史模板、最新运行用例的response'
+)
+async def get_response(case_id: int, number: int):
+    if CASE_RESPONSE.get(case_id):
+        try:
+            return CASE_RESPONSE[case_id][number]
+        except IndexError:
+            return None
+    else:
+        return None

@@ -17,3 +17,8 @@ CASE_STATUS = {
 SETTING_INFO_DICT = {
 
 }
+
+# 测试用例实时response
+CASE_RESPONSE = {
+
+}

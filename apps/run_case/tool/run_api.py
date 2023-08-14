@@ -27,7 +27,7 @@ from tools.read_setting import setting
 from apps.template import schemas as temp
 from apps.case_service import schemas as service
 from apps.run_case import crud
-from apps.run_case import CASE_STATUS
+from apps.run_case import CASE_STATUS, CASE_RESPONSE
 from .check_data import check_customize
 from tools import replace_data
 
@@ -247,6 +247,7 @@ class RunApi:
                 break
 
         asyncio.create_task(self._del_case_status(random_key))
+        await self._add_response(response_list=response, case_id=case_id)
 
         case_info = await crud.update_test_case_order(db=db, case_id=case_id, is_fail=is_fail)
 
@@ -514,3 +515,13 @@ class RunApi:
             del tmp_header['Content-Length']
 
         return tmp_header
+
+    @staticmethod
+    async def _add_response(response_list: list, case_id: int):
+        """
+        添加测试用例的response到缓存种
+        :param response_list:
+        :param case_id:
+        :return:
+        """
+        CASE_RESPONSE[case_id] = response_list
