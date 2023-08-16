@@ -83,6 +83,7 @@ class RunApi:
         temp_data = copy.deepcopy(temp_data)
         case_data = copy.deepcopy(case_data)
         # 返回结果收集
+        api_info_list = []
         response = []
         result = []
         is_fail = False
@@ -211,6 +212,15 @@ class RunApi:
             request_info['response'] = res_json
             response.append(res_json)
 
+            api_info_list.append(
+                {
+                    'path': url,
+                    'params': params,
+                    'data': data,
+                    'headers': headers,
+                    'response': res_json
+                }
+            )
             # 判断响应结果，调整校验内容收集
             if res.status != check['status_code']:
                 request_info['actual'] = {'status_code': [res.status]}
@@ -247,7 +257,7 @@ class RunApi:
                 break
 
         asyncio.create_task(self._del_case_status(random_key))
-        await self._add_response(response_list=response, case_id=case_id)
+        await self._add_response(api_info_list=api_info_list, case_id=case_id)
 
         case_info = await crud.update_test_case_order(db=db, case_id=case_id, is_fail=is_fail)
 
@@ -517,11 +527,11 @@ class RunApi:
         return tmp_header
 
     @staticmethod
-    async def _add_response(response_list: list, case_id: int):
+    async def _add_response(api_info_list: list, case_id: int):
         """
         添加测试用例的response到缓存种
-        :param response_list:
+        :param api_info_list:
         :param case_id:
         :return:
         """
-        CASE_RESPONSE[case_id] = response_list
+        CASE_RESPONSE[case_id] = api_info_list

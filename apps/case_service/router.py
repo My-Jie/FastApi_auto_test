@@ -202,7 +202,7 @@ async def temp_to_case(
 
 @case_service.get(
     '/data/{case_id}',
-    response_model=schemas.TestCaseDataOut,
+    # response_model=schemas.TestCaseDataOut,
     response_class=response_code.MyJSONResponse,
     response_model_exclude_unset=True,
     name='查看用例测试数据'
@@ -215,7 +215,10 @@ async def case_data_info(case_id: int, db: Session = Depends(get_db)):
     if not case_info:
         return await response_code.resp_404()
 
+    temp_info = await temp_crud.get_template_data(db=db, temp_id=case_info[0].temp_id)
+
     return await GetCaseDataInfo().service(
+        temp_info=temp_info,
         case_info=case_info,
         case_data_info=await crud.get_case_data(db=db, case_id=case_id)
     )
@@ -223,7 +226,7 @@ async def case_data_info(case_id: int, db: Session = Depends(get_db)):
 
 @case_service.get(
     '/download/data/{case_id}',
-    response_model=schemas.TestCaseDataOut,
+    # response_model=schemas.TestCaseDataOut,
     response_class=response_code.MyJSONResponse,
     response_model_exclude_unset=True,
     name='下载测试数据-Json'
@@ -236,7 +239,10 @@ async def download_case_data_info(case_id: int, db: Session = Depends(get_db)):
     if not case_info:
         return await response_code.resp_404()
 
+    temp_info = await temp_crud.get_template_data(db=db, temp_id=case_info[0].temp_id)
+
     case_data = await GetCaseDataInfo().service(
+        temp_info=temp_info,
         case_info=case_info,
         case_data_info=await crud.get_case_data(db=db, case_id=case_id)
     )
@@ -774,13 +780,22 @@ async def copy_case(case_id: int, db: Session = Depends(get_db)):
 
 
 @case_service.get(
-    '/get/response',
-    name='按用例id和number获取历史模板、最新运行用例的response'
+    '/get/apiInfo',
+    name='按用例id和number获取历史模板的path, params, data, herders, response'
 )
-async def get_response(case_id: int, number: int, db: Session = Depends(get_db)):
+async def get_response(case_id: int, number: int, type_: str, db: Session = Depends(get_db)):
     case_info = await crud.get_case_info(db=db, case_id=case_id)
     if not case_info:
         return await response_code.resp_404(message='没有获取到这个用例id')
 
     temp_info = await temp_crud.get_template_data(db=db, temp_id=case_info[0].temp_id, numbers=[number])
-    return temp_info[0].response
+
+    return_dict = {
+        'path': temp_info[0].path,
+        'params': temp_info[0].params,
+        'data': temp_info[0].data,
+        'headers': temp_info[0].headers,
+        'response': temp_info[0].response,
+    }
+
+    return return_dict.get(type_)

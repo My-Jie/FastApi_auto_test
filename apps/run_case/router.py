@@ -399,13 +399,20 @@ async def set_api_setting_info(
 
 
 @run_case.get(
-    '/get/response',
+    '/get/apiInfo',
     name='按用例id和number获取历史模板、最新运行用例的response'
 )
-async def get_response(case_id: int, number: int):
+async def get_response(case_id: int, type_: str, number: int):
     if CASE_RESPONSE.get(case_id):
         try:
-            return CASE_RESPONSE[case_id][number]
+            return_dict = {
+                'path': CASE_RESPONSE[case_id][number].get('path'),
+                'params': CASE_RESPONSE[case_id][number].get('params'),
+                'data': CASE_RESPONSE[case_id][number].get('data'),
+                'headers': CASE_RESPONSE[case_id][number].get('headers'),
+                'response': CASE_RESPONSE[case_id][number].get('response'),
+            }
+            return return_dict.get(type_)
         except IndexError:
             return None
     else:

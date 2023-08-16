@@ -15,17 +15,20 @@ class GetCaseDataInfo:
     获取测试数据
     """
 
-    async def service(self, case_info: tuple, case_data_info: tuple):
+    async def service(self, temp_info: tuple, case_info: tuple, case_data_info: tuple):
         """
         业务流程测试用例
+        :param temp_info:
         :param case_info:
         :param case_data_info:
         :return:
         """
         new_case_data = []
-        for data in case_data_info:
+        for i, data in enumerate(case_data_info):
             case_data = {
                 'number': data.number,
+                'host': temp_info[i].host,
+                'method': temp_info[i].method,
                 'path': data.path,
                 'headers': data.headers,
                 'params': data.params,
