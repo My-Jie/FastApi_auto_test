@@ -54,7 +54,7 @@ async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict 
             temp_info = await temp_crud.get_temp_name(db=db, temp_id=case_info[0].temp_id)
             # 处理数据，执行用例
             try:
-                case, run_order, success, fail, is_fail = await RunApi().fo_service(
+                case, run_order, success, fail, is_fail, total_time = await RunApi().fo_service(
                     db=db,
                     case_id=case_id,
                     temp_data=temp_data,
@@ -93,7 +93,8 @@ async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict 
                 'is_fail': is_fail,
                 'run_order': run_order,
                 'success': success,
-                'fail': fail
+                'fail': fail,
+                'total_time': total_time
             }
         else:
             report[case_id] = {
@@ -101,7 +102,8 @@ async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict 
                 'is_fail': True,
                 'run_order': 0,
                 'success': 0,
-                'fail': 0
+                'fail': 0,
+                'total_time': 0
             }
 
     return report
@@ -132,7 +134,7 @@ async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_
         temp_info = await temp_crud.get_temp_name(db=db, temp_id=case_info[0].temp_id)
         # 处理数据，执行用例
         try:
-            case, run_order, success, fail, is_fail = await RunApi().fo_service(
+            case, run_order, success, fail, is_fail, total_time = await RunApi().fo_service(
                 db=db,
                 case_id=case_id,
                 temp_data=temp_data,
@@ -172,6 +174,7 @@ async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_
             'run_order': run_order,
             'success': success,
             'fail': fail,
+            'total_time': total_time
         }
 
     return report

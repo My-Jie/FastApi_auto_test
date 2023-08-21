@@ -18,7 +18,12 @@ SETTING_INFO_DICT = {
 
 }
 
-# 测试用例实时response
+# 测试用例实时请求信息：按path、params、data、headers、response分组
 CASE_RESPONSE = {
+
+}
+
+# 完成的测试接口请求和响应信息
+CASE_RESULT = {
 
 }

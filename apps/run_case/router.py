@@ -22,7 +22,7 @@ from apps.template import crud
 from apps.case_service import crud as case_crud
 from apps.case_ddt import crud as gather_crud
 from apps.case_ui import crud as ui_crud
-from apps.run_case import schemas, CASE_STATUS, SETTING_INFO_DICT, CASE_RESPONSE
+from apps.run_case import schemas, CASE_STATUS, SETTING_INFO_DICT, CASE_RESPONSE, CASE_RESULT
 from apps.setting_bind import crud as setting_crud
 from apps.whole_conf import crud as conf_crud
 from .tool import run_service_case, run_ddt_case, run_ui_case, header, replace_playwright, check_customize
@@ -402,7 +402,7 @@ async def set_api_setting_info(
     '/get/apiInfo',
     name='按用例id和number获取历史模板、最新运行用例的response'
 )
-async def get_response(case_id: int, type_: str, number: int):
+async def get_apiInfo(case_id: int, type_: str, number: int):
     if CASE_RESPONSE.get(case_id):
         try:
             return_dict = {
@@ -417,3 +417,14 @@ async def get_response(case_id: int, type_: str, number: int):
             return None
     else:
         return None
+
+
+@run_case.get(
+    '/get/case/schedule',
+    name='测试用例执行完成后的完整请求响应信息'
+)
+async def get_case_schedule(case_id: int):
+    if CASE_RESULT.get(case_id):
+        return CASE_RESULT[case_id]
+    else:
+        return []

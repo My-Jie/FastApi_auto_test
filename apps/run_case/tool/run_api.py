@@ -27,7 +27,7 @@ from tools.read_setting import setting
 from apps.template import schemas as temp
 from apps.case_service import schemas as service
 from apps.run_case import crud
-from apps.run_case import CASE_STATUS, CASE_RESPONSE
+from apps.run_case import CASE_STATUS, CASE_RESPONSE, CASE_RESULT
 from .check_data import check_customize
 from tools import replace_data
 
@@ -82,11 +82,14 @@ class RunApi:
 
         temp_data = copy.deepcopy(temp_data)
         case_data = copy.deepcopy(case_data)
+
         # 返回结果收集
         api_info_list = []
         response = []
         result = []
         is_fail = False
+        total_time = 0
+
         for num in range(len(temp_data)):
             config: dict = copy.deepcopy(dict(case_data[num].config))
             logger.debug(f"{'=' * 30}case_id:{case_id},开始请求,number:{num}{'=' * 30}")
@@ -173,7 +176,7 @@ class RunApi:
                 random_key=random_key,
                 db_config=db_config
             )
-            res, is_fail = response_info
+            res, is_fail, response_time = response_info
 
             if not is_fail:
                 CASE_STATUS[random_key]['success'] += 1
@@ -200,6 +203,11 @@ class RunApi:
             # logger.info(f"case_id:{case_id},状态码: {res.status}")
 
             # 收集结果
+            total_time += response_time
+            request_info['time'] = response_time
+            request_info['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+            request_info['is_fail'] = is_fail
+            request_info['total_time'] = total_time
             request_info['file'] = True if temp_data[num].file else False
             request_info['expect'] = check
             request_info['description'] = case_data[num].description if case_data[num].description else ''
@@ -256,6 +264,8 @@ class RunApi:
                 await self.sees.close()
                 break
 
+        CASE_RESULT[case_id] = result
+
         asyncio.create_task(self._del_case_status(random_key))
         await self._add_response(api_info_list=api_info_list, case_id=case_id)
 
@@ -272,7 +282,8 @@ class RunApi:
                case_info.run_order, \
                case_info.success, \
                case_info.fail, \
-               is_fail
+               is_fail, \
+               total_time
 
     @staticmethod
     async def _check_count(check: dict):
@@ -347,7 +358,9 @@ class RunApi:
                     )
                 request_info['data'] = files_data
 
+            start_time = time.monotonic()
             res = await self.sees.request(**request_info, allow_redirects=False)
+            response_time = int((time.monotonic() - start_time) * 1000)
 
             if files:
                 request_info['data'] = [
@@ -482,7 +495,7 @@ class RunApi:
             sleep -= 5
             num += 1
 
-        return res, is_fail
+        return res, is_fail, response_time
 
     @staticmethod
     async def _sql_data(sql: str, db_config: dict):

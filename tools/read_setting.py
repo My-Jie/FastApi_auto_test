@@ -15,7 +15,7 @@ def read_yaml() -> dict:
     读取setting配置文件
     :return:
     """
-    with open('setting.yaml', 'r') as r:
+    with open('setting.yaml', 'r', encoding='utf-8', errors='ignore') as r:
         data = r.read()
 
     conf = yaml.load(data, Loader=yaml.FullLoader)
