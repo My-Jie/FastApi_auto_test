@@ -204,6 +204,7 @@ class RunApi:
 
             # 收集结果
             total_time += response_time
+            request_info['total_api'] = self.case_status['total']
             request_info['time'] = response_time
             request_info['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
             request_info['is_fail'] = is_fail
