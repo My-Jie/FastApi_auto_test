@@ -34,19 +34,23 @@ async def send_api(db: Session, api_info: schemas.TemplateDataInTwo, get_cookie:
 
     # 处理下response数据格式
     temp_info = RESPONSE_INFO.get(api_info.temp_id, {})
-    temp_list = []
+    response = []
+    response_headers = []
     for i in range(api_info.number):
         if temp_info.get(i):
-            temp_list.append(temp_info.get(i, {}).get('response', {}))
+            response.append(temp_info.get(i, {}).get('response', {}))
+            response_headers.append(temp_info.get(i, {}).get('response_headers', {}))
         else:
-            temp_list.append({})
+            response.append({})
+            response_headers.append({})
 
     fk = FakerData()
     # 识别url表达式
     url = await replace_data.replace_url(
         db=db,
         old_str=f"{api_info.host}{api_info.path}",
-        response=temp_list,
+        response=response,
+        response_headers=response_headers,
         faker=fk,
         code='',
         extract='',
@@ -56,7 +60,8 @@ async def send_api(db: Session, api_info: schemas.TemplateDataInTwo, get_cookie:
     params = await replace_data.replace_params_data(
         db=db,
         data=api_info.params,
-        response=temp_list,
+        response=response,
+        response_headers=response_headers,
         faker=fk,
         code='',
         extract='',
@@ -66,7 +71,8 @@ async def send_api(db: Session, api_info: schemas.TemplateDataInTwo, get_cookie:
     data = await replace_data.replace_params_data(
         db=db,
         data=api_info.data,
-        response=temp_list,
+        response=response,
+        response_headers=response_headers,
         faker=fk,
         code='',
         extract='',
@@ -76,7 +82,8 @@ async def send_api(db: Session, api_info: schemas.TemplateDataInTwo, get_cookie:
     case_header = await replace_data.replace_params_data(
         db=db,
         data=api_info.headers,
-        response=temp_list,
+        response_headers=response_headers,
+        response=response,
         faker=fk,
         customize={}
     )
@@ -107,8 +114,8 @@ async def send_api(db: Session, api_info: schemas.TemplateDataInTwo, get_cookie:
             'path': url,
             'params': params,
             'data': data,
-            'request-headers': case_header,
-            'response-headers': dict(res.headers),
+            'request_headers': case_header,
+            'response_headers': dict(res.headers),
             'response': res_data,
             'cookie': cookie,
         }

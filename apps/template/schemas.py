@@ -61,8 +61,9 @@ class TemplateDataIn(BaseModel):
     data: Union[dict, list] = {}
     file: bool
     file_data: Optional[list] = []
-    headers: Optional[dict] = {}
     response: Union[dict, list, str] = None
+    headers: Optional[dict] = {}
+    response_headers: Optional[dict] = {}
     description: Union[str, None] = None
 
     class Config:

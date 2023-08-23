@@ -29,6 +29,7 @@ class RepType(str, Enum):
     data = 'data'
     headers = 'headers'
     response = 'response'
+    response_headers = 'response_headers'
 
 
 class ExtType(str, Enum):

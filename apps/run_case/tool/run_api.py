@@ -86,6 +86,7 @@ class RunApi:
         # 返回结果收集
         api_info_list = []
         response = []
+        response_headers = []
         result = []
         is_fail = False
         total_time = 0
@@ -99,6 +100,7 @@ class RunApi:
                     db=db,
                     old_str=f"{temp_data[num].host}{case_data[num].path}",
                     response=response,
+                    response_headers=response_headers,
                     faker=self.fk,
                     code=self.code,
                     extract=self.extract,
@@ -109,6 +111,7 @@ class RunApi:
                     db=db,
                     data=case_data[num].params,
                     response=response,
+                    response_headers=response_headers,
                     faker=self.fk,
                     code=self.code,
                     extract=self.extract,
@@ -119,6 +122,7 @@ class RunApi:
                     db=db,
                     data=case_data[num].data,
                     response=response,
+                    response_headers=response_headers,
                     faker=self.fk,
                     code=self.code,
                     extract=self.extract,
@@ -129,6 +133,7 @@ class RunApi:
                     db=db,
                     data=case_data[num].headers,
                     response=response,
+                    response_headers=response_headers,
                     faker=self.fk,
                     customize=customize
                 )
@@ -137,6 +142,7 @@ class RunApi:
                     db=db,
                     data=case_data[num].check,
                     response=response,
+                    response_headers=response_headers,
                     faker=self.fk,
                     customize=customize
                 )
@@ -220,6 +226,7 @@ class RunApi:
                 res_json = {}
             request_info['response'] = res_json
             response.append(res_json)
+            response_headers.append(dict(res.headers))
 
             api_info_list.append(
                 {

@@ -22,6 +22,7 @@ async def replace_params_data(
         db: Session,
         data: [dict, list],
         response: list,
+        response_headers: list,
         faker: FakerData,
         code: str = None,
         extract: str = '',
@@ -41,6 +42,7 @@ async def replace_params_data(
                 db=db,
                 x=data_json,
                 response=response,
+                response_headers=response_headers,
                 faker=faker,
                 code=code,
                 extract=extract,
@@ -56,6 +58,7 @@ async def replace_params_data(
                     db=db,
                     x=data_json[key],
                     response=response,
+                    response_headers=response_headers,
                     faker=faker,
                     code=code,
                     extract=extract,
@@ -77,6 +80,7 @@ async def replace_params_data(
                             db=db,
                             x=x,
                             response=response,
+                            response_headers=response_headers,
                             faker=faker,
                             code=code,
                             extract=extract,
@@ -99,6 +103,7 @@ async def replace_url(
         db: Session,
         old_str: str,
         response: list,
+        response_headers: list,
         faker: FakerData,
         code: str,
         extract: str,
@@ -111,6 +116,7 @@ async def replace_url(
         db=db,
         x=old_str,
         response=response,
+        response_headers=response_headers,
         faker=faker,
         value_type='url',
         code=code,
@@ -123,6 +129,7 @@ async def header_srt(
         db: Session,
         x: str,
         response: list,
+        response_headers: list,
         faker: FakerData,
         value_type: str = None,
         code: str = None,
@@ -135,6 +142,7 @@ async def header_srt(
     :param db:
     :param x:
     :param response:
+    :param response_headers:
     :param faker:
     :param value_type:
     :param code:
@@ -146,7 +154,10 @@ async def header_srt(
     if "{{" in x and "$" in x and "}}" in x:
         replace_values: List[str] = re.compile(r'{{(.*?)}}', re.S).findall(x)
         for replace in replace_values:
-            new_value = await _header_str_param(x=replace, response=response)
+            if 'h$' in x:
+                new_value = await _header_str_param(x=replace, response=response_headers)
+            else:
+                new_value = await _header_str_param(x=replace, response=response)
 
             if value_type == 'url':
                 x = re.sub("{{(.*?)}}", str(new_value), x, count=1)

@@ -44,6 +44,7 @@ class TemplateData(Base):
     file_data = Column(JSON, comment='文件数据')
     headers = Column(JSON, comment='请求头')
     response = Column(JSON, comment='响应数据')
+    response_headers = Column(JSON, comment='响应请求头')
     description = Column(String, comment='用例描述')
 
     created_at = Column(DateTime, server_default=func.now(), comment='创建时间')

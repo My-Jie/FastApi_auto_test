@@ -587,11 +587,12 @@ async def set_api_check(sac: schemas.setApiHeader, db: Session = Depends(get_db)
 
 @case_service.get(
     '/response/jsonpath/list',
-    name='从原始数据response中获取jsonpath表达式',
+    name='从原始数据response/response_headers中获取jsonpath表达式',
 )
 async def get_response_json_path(
         case_id: int,
         extract_contents: Any,
+        data_type: schemas.RepType,
         key_value: schemas.KeyValueType,
         ext_type: schemas.ExtType,
         db: Session = Depends(get_db)
@@ -607,7 +608,7 @@ async def get_response_json_path(
     value_list = ExtractParamsPath.get_value_path(
         extract_contents=extract_contents,
         my_data=temp_data,
-        type_=schemas.RepType.response,
+        type_=data_type,
         key_value=key_value,
         ext_type=ext_type
     )

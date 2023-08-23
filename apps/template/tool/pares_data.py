@@ -84,6 +84,7 @@ class ParseData:
                 'file': True if body_json[0] == 'file' else False,
                 'file_data': body_json[1] if body_json[0] == 'file' else [],
                 'headers': {header['name']: header['value'] for header in data['request']['headers']},
+                'response_headers': {header['name']: header['value'] for header in data['response']['headers']},
                 'response': res_data,
             }
             temp_info.append(new_data)
