@@ -154,10 +154,13 @@ async def header_srt(
     if "{{" in x and "$" in x and "}}" in x:
         replace_values: List[str] = re.compile(r'{{(.*?)}}', re.S).findall(x)
         for replace in replace_values:
-            if 'h$' in x:
-                new_value = await _header_str_param(x=replace, response=response_headers)
-            else:
-                new_value = await _header_str_param(x=replace, response=response)
+            try:
+                if 'h$' in x:
+                    new_value = await _header_str_param(x=replace, response=response_headers)
+                else:
+                    new_value = await _header_str_param(x=replace, response=response)
+            except IndexError:
+                new_value = ''
 
             if value_type == 'url':
                 x = re.sub("{{(.*?)}}", str(new_value), x, count=1)
@@ -221,13 +224,21 @@ async def _header_str_param(x: str, response: list):
     :return:
     """
     num, json_path = x.split('.', 1)
+    # list列表索引
+    list_index = 0
+    if "?" in json_path:
+        try:
+            list_index = int(json_path.split('?', 1)[1])
+        except ValueError:
+            list_index = 0
 
-    # 字符串截取
+    # 字符串索引切片取值
     start_index, end_index = None, None
     if "|" in json_path:
         json_path, str_index = json_path.split('|', 1)
         start_index, end_index = str_index.split(':', 1)
 
+    # 同级邻居确认
     if ',' in json_path:
         json_path, seek_list = json_path.split(',', 1)
         extract_key = json_path.split('.')[-1]
@@ -244,25 +255,25 @@ async def _header_str_param(x: str, response: list):
                 value = value & value_set
 
         if value:
-            return list(value)[0]
+            return list(value)[list_index]
         else:
             return ''
 
     value = jsonpath.jsonpath(response[int(num)], json_path)
     if value:
         if start_index is None and end_index is None:
-            return value[0]
+            return value[list_index]
         else:
-            if isinstance(value[0], str):
+            if isinstance(value[list_index], str):
                 try:
-                    return value[0][
+                    return value[list_index][
                            int(start_index):int(
                                end_index) if end_index != '' else None
                            ]
                 except ValueError:
-                    return value[0]
+                    return value[list_index]
             else:
-                return value[0]
+                return value[list_index]
     else:
         return ''
 
