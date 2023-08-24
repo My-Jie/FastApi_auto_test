@@ -402,7 +402,7 @@ async def set_api_setting_info(
     '/get/apiInfo',
     name='按用例id和number获取历史模板、最新运行用例的response'
 )
-async def get_apiInfo(case_id: int, type_: str, number: int):
+async def get_api_info(case_id: int, type_: str, number: int):
     if CASE_RESPONSE.get(case_id):
         try:
             return_dict = {

@@ -243,3 +243,25 @@ async def get_remote_browsers():
     ]
 
     return await response_code.resp_200(data=data)
+
+
+@case_ui.get(
+    '/copy/case',
+    name='复制测试用例数据，形成新的测试用例',
+)
+async def copy_case(temp_id: int, db: Session = Depends(get_db)):
+    temp_info = await crud.get_playwright(db=db, temp_id=temp_id)
+    if not temp_info:
+        return await response_code.resp_404(message='没有获取到这个用例id')
+
+    await crud.create_playwright(
+        db=db,
+        data=schemas.PlaywrightIn(**{
+            'project_name': temp_info[0].project_name,
+            'temp_name': temp_info[0].temp_name + ' - 副本',
+            'text': temp_info[0].text,
+        }),
+        rows=temp_info[0].rows
+    )
+
+    return await response_code.resp_200()
