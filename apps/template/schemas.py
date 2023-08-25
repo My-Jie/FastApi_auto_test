@@ -10,6 +10,12 @@
 from datetime import datetime
 from pydantic import BaseModel, HttpUrl
 from typing import Optional, List, Union
+from enum import Enum
+
+
+class HarType(str, Enum):
+    charles = 'charles'
+    chrome = 'chrome'
 
 
 # 模板名称的请求/响应数据模型

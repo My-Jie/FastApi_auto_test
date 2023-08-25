@@ -45,6 +45,7 @@ template = APIRouter()
 async def upload_file_har(
         temp_name: str,
         project_name: str,
+        har_type: schemas.HarType,
         file: UploadFile,
         db: Session = Depends(get_db)
 ):
@@ -65,7 +66,8 @@ async def upload_file_har(
 
     # 解析数据，拿到解析结果
     temp_info = await ParseData.pares_data(
-        har_data=file.file.read()
+        har_data=file.file.read(),
+        har_type=har_type
     )
 
     # 创建主表数据
@@ -92,7 +94,7 @@ async def analysis_file_har(file: UploadFile):
     if file.content_type != 'application/har+json':
         return await response_code.resp_400(message=f'文件类型错误，只支持har格式文件')
 
-    return await ParseData.pares_data(har_data=file.file.read())
+    return await ParseData.pares_data(har_data=file.file.read(), har_type=schemas.HarType.charles)
 
 
 @template.post(
@@ -150,7 +152,7 @@ async def upload_swagger_json(
     response_model=case_schemas.TestCaseDataOut,
     # response_class=response_code.MyJSONResponse,
     response_model_exclude_unset=True,
-    name='插入原始数据到模板中，并提供插入数据的预处理数据下载',
+    name='插入charles原始数据到模板中，并提供插入数据的预处理数据下载',
     # response_model_exclude=['headers', 'file_data']
 )
 async def insert_har(
@@ -165,7 +167,7 @@ async def insert_har(
     if file.content_type != 'application/har+json':
         return await response_code.resp_400(message=f'文件类型错误，只支持har格式文件')
 
-    har_data = await ParseData.pares_data(har_data=file.file.read())
+    har_data = await ParseData.pares_data(har_data=file.file.read(), har_type=schemas.HarType.charles)
     template_data = await crud.get_template_data(db=db, temp_id=temp_id)
     if not template_data:
         return await response_code.resp_404(message='没有获取到这个模板id')

@@ -9,6 +9,7 @@
 
 import base64
 import json
+from apps.template import schemas
 from tools.global_log import logger
 
 FILTER_MIME_TYPE = [
@@ -32,15 +33,19 @@ class ParseData:
     """
 
     @classmethod
-    async def pares_data(cls, har_data: bytes) -> list:
+    async def pares_data(cls, har_data: bytes, har_type: schemas.HarType) -> list:
         data_json = json.loads(har_data.decode('utf-8'))
 
         temp_info = []
         api_count = 0
         for data in data_json['log']['entries']:
             # 过滤文件接口
-            if data['response']['content'].get('mimeType') in FILTER_MIME_TYPE:
-                continue
+            if har_type == schemas.HarType.charles:
+                if data['response']['content'].get('mimeType') in FILTER_MIME_TYPE:
+                    continue
+            else:
+                if data['_resourceType'] != 'xhr':
+                    continue
 
             logger.debug(f"{'=' * 30}开始解析{api_count}{'=' * 30}")
             # logger.debug(f"原始数据: {json.dumps(data, indent=2, ensure_ascii=False)}")
@@ -64,7 +69,10 @@ class ParseData:
 
             if 'application/json' in str(data['response']['content'].get('mimeType')):
                 if data['response']['content'].get('text'):
-                    res_data = json.loads(base64.b64decode(data['response']['content']['text'].encode('utf-8')))
+                    if har_type == schemas.HarType.charles:
+                        res_data = json.loads(base64.b64decode(data['response']['content']['text'].encode('utf-8')))
+                    else:
+                        res_data = json.loads(data['response']['content']['text'])
                 else:
                     res_data = {}
             elif 'text/json' in str(data['response']['content'].get('mimeType')):
