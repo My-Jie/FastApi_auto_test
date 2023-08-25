@@ -30,7 +30,7 @@ from apps.template.tool import ParseData, check_num, GenerateCase, InsertTempDat
 from apps.case_service.tool import refresh, temp_to_case
 from apps.whole_conf import crud as conf_crud
 from tools import CreateExcel, OperationJson
-from .tool import send_api, get_jsonpath, del_debug
+from .tool import send_api, get_jsonpath, del_debug, curl_to_request_kwargs
 
 template = APIRouter()
 
@@ -145,6 +145,21 @@ async def upload_swagger_json(
             for temp in temp_info:
                 await crud.create_template_data(db=db, data=schemas.TemplateDataIn(**temp), temp_id=db_template.id)
             return await crud.update_template(db=db, temp_id=db_template.id, api_count=len(temp_info))
+
+
+@template.post(
+    '/upload/curl',
+    name='解析cURL(bash)数据',
+    response_class=response_code.MyJSONResponse,
+)
+async def upload_curl(
+        curl_command: schemas.curlCommand
+):
+    try:
+        data = curl_to_request_kwargs(curl_command=curl_command.curl_command)
+        return data
+    except IndexError:
+        return response_code.resp_400(message='数据格式错误')
 
 
 @template.put(

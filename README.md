@@ -78,6 +78,11 @@
     
 [随便测测-做UI测试](https://blog.csdn.net/yangj507/article/details/131579327)
 
+## v2.4.5增加cURL(bash)解析
+![image](img/1692978076215.jpg)
+* 后端python解析，返回到前端
+* 填充到模板编辑窗口
+
 ## v2.4.4文件上传-har，支持选择charles和chrome
 ![image](img/1692942609447.jpg)
 ![image](img/1692942876768.jpg)

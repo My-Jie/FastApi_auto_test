@@ -14,3 +14,4 @@ from .insert_temp_data import InsertTempData
 from .del_temp_data import DelTempData
 from .read_swagger import ReadSwagger
 from .debug_api import send_api, get_jsonpath, del_debug
+from .curl_input import curl_to_request_kwargs

@@ -18,6 +18,10 @@ class HarType(str, Enum):
     chrome = 'chrome'
 
 
+class curlCommand(BaseModel):
+    curl_command: str
+
+
 # 模板名称的请求/响应数据模型
 class TemplateIn(BaseModel):
     temp_name: str
