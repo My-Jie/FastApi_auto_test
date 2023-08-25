@@ -78,6 +78,12 @@
     
 [随便测测-做UI测试](https://blog.csdn.net/yangj507/article/details/131579327)
 
+## v2.4.4文件上传-har，支持选择charles和chrome
+![image](img/1692942609447.jpg)
+![image](img/1692942876768.jpg)
+* charles的har过滤：按mimeType内容进行过滤js、css、image等
+* chrome的har过滤: _resourceType字段值 != xhr
+
 ## v2.4.3jsonpath支持取第几个值
 ![image](img/1692777697683.jpg)
 ![image](img/1692777846519.jpg)
