@@ -12,3 +12,4 @@ from .get_case_data_info import GetCaseDataInfo
 from .check_Info import check
 from .update_case import refresh, temp_to_case
 from .auto_check import my_auto_check
+from .jsonpath_count import count as js_count

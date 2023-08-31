@@ -21,7 +21,7 @@ from apps import response_code
 from tools.check_case_json import CheckJson
 from tools import OperationJson, ExtractParamsPath, RepData, filter_number
 from tools.read_setting import setting
-from .tool import GetCaseDataInfo, check
+from .tool import GetCaseDataInfo, check, js_count
 
 from apps.template import crud as temp_crud
 from apps.case_service import crud, schemas
@@ -800,3 +800,19 @@ async def get_response(case_id: int, number: int, type_: str, db: Session = Depe
     }
 
     return return_dict.get(type_)
+
+
+@case_service.get(
+    '/get/jsonpath',
+    name='获取用例中jsonpath的引用关系'
+)
+async def get_jsonpath(case_id: int, db: Session = Depends(get_db)):
+    case_info = await crud.get_case_info(db=db, case_id=case_id)
+    if not case_info:
+        return await response_code.resp_404(message='没有获取到这个用例id')
+
+    case_list = await crud.get_case_data(db=db, case_id=case_info[0].id)
+
+    data_count = js_count(case_list=case_list)
+
+    return data_count
