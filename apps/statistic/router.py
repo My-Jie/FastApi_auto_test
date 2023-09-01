@@ -86,7 +86,7 @@ async def get_playwright_list(
         } for x in temp_info
     ]
 
-    return case_info or await response_code.resp_404()
+    return case_info
 
 
 @statistic.get(
@@ -118,7 +118,7 @@ async def case_data_echarts(
                 "fail": case.fail,
             }
         )
-    return case_info or await response_code.resp_404()
+    return case_info
 
 
 @statistic.get(

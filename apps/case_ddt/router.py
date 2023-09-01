@@ -35,7 +35,7 @@ async def down_data_gather(case_id: int, db: Session = Depends(get_db)):
     """
     case_data = await case_crud.get_case_data(db=db, case_id=case_id)
     if not case_data:
-        return await response_code.resp_404(message='没有获取到这个用例id')
+        return case_data
 
     case_info = await case_crud.get_case_info(db=db, case_id=case_id)
     case_name = case_info[0].case_name
@@ -75,7 +75,7 @@ async def upload_data_gather(
 
     case_data = await case_crud.get_case_info(db=db, case_id=case_id)
     if not case_data:
-        return await response_code.resp_404(message='没有获取到这个用例id')
+        return await response_code.resp_400(message='没有获取到这个用例id')
 
     path = f'./files/excel/{time.strftime("%Y%m%d%H%M%S", time.localtime(time.time()))}.xlsx'
     # 写入本地
@@ -103,8 +103,4 @@ async def get_data_gather(case_id: int, db: Session = Depends(get_db)):
     """
     获取数据集数据
     """
-    gather_info = await crud.get_gather(db=db, case_id=case_id)
-    if not gather_info:
-        return await response_code.resp_404(message='这个用例没有上传数据集')
-
-    return gather_info
+    return await crud.get_gather(db=db, case_id=case_id)

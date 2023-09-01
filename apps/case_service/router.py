@@ -61,7 +61,7 @@ async def test_case_data(
             template_data=template_data
         )
 
-    return await response_code.resp_404()
+    return await response_code.resp_400()
 
 
 @case_service.get(
@@ -101,7 +101,7 @@ async def download_case_data(
             background=BackgroundTask(lambda: os.remove(path))
         )
 
-    return await response_code.resp_404()
+    return await response_code.resp_400()
 
 
 @case_service.post(
@@ -127,7 +127,7 @@ async def test_case_upload_json(
 
     db_temp = await temp_crud.get_temp_name(db=db, temp_id=temp_id)
     if not db_temp:
-        return await response_code.resp_404(message='模板不存在')
+        return await response_code.resp_400(message='模板不存在')
 
     # 校验数据
     try:
@@ -147,7 +147,7 @@ async def test_case_upload_json(
             return await response_code.resp_400(message='未输入case_id')
 
         if not await crud.get_case_info(db=db, case_id=case_id):
-            return await response_code.resp_404()
+            return await response_code.resp_400(message='未查询到用例数据')
 
         return await cover_insert(db=db, case_id=case_id, case_data=case_data)
     else:  # 不覆盖
@@ -170,7 +170,7 @@ async def temp_to_case(
 ):
     db_temp = await temp_crud.get_temp_name(db=db, temp_id=temp_id)
     if not db_temp:
-        return await response_code.resp_404(message='模板不存在')
+        return await response_code.resp_400(message='模板不存在')
 
     template_data = await temp_crud.get_template_data(db=db, temp_name=db_temp[0].temp_name)
     test_data = await GenerateCase().read_template_to_api(
@@ -187,9 +187,9 @@ async def temp_to_case(
 
         case_info = await crud.get_case_info(db=db, case_id=case_id)
         if not case_info:
-            return await response_code.resp_404(message='没有这个case_id')
+            return await response_code.resp_400(message='没有这个case_id')
         if case_info[0].temp_id != temp_id:
-            return await response_code.resp_404(message='这个case_id没有绑定到这个模板')
+            return await response_code.resp_400(message='这个case_id没有绑定到这个模板')
 
         await cover_insert(db=db, case_id=case_id, case_data=test_data)
         return await response_code.resp_200(message='覆盖成功', data={'case_id': case_id})
@@ -213,7 +213,7 @@ async def case_data_info(case_id: int, db: Session = Depends(get_db)):
     """
     case_info = await crud.get_case_info(db=db, case_id=case_id)
     if not case_info:
-        return await response_code.resp_404()
+        return case_info
 
     temp_info = await temp_crud.get_template_data(db=db, temp_id=case_info[0].temp_id)
 
@@ -237,7 +237,7 @@ async def download_case_data_info(case_id: int, db: Session = Depends(get_db)):
     """
     case_info = await crud.get_case_info(db=db, case_id=case_id)
     if not case_info:
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     temp_info = await temp_crud.get_template_data(db=db, temp_id=case_info[0].temp_id)
 
@@ -298,11 +298,11 @@ async def case_data_list(
             }
         )
     return {
-               'items': case_info,
-               'total': await crud.get_count(db=db, case_name=case_name),
-               'page': page,
-               'size': size
-           } or await response_code.resp_404()
+        'items': case_info,
+        'total': await crud.get_count(db=db, case_name=case_name),
+        'page': page,
+        'size': size
+    }
 
 
 @case_service.delete(
@@ -311,7 +311,7 @@ async def case_data_list(
 )
 async def del_case(case_id: int, db: Session = Depends(get_db)):
     if not await crud.get_case_info(db=db, case_id=case_id):
-        return await response_code.resp_404()
+        return await response_code.resp_400()
     await crud.del_case_data(db=db, case_id=case_id)
     await ddt_crud.del_test_gather(db=db, case_id=case_id)
     shutil.rmtree(f"{setting['allure_path']}/{case_id}", ignore_errors=True)
@@ -325,7 +325,7 @@ async def del_case(case_id: int, db: Session = Depends(get_db)):
     name='查询url数据'
 )
 async def query_urls(url: str = Query(..., min_length=5), db: Session = Depends(get_db)):
-    return await crud.get_urls(db=db, url=url) or await response_code.resp_404()
+    return await crud.get_urls(db=db, url=url)
 
 
 @case_service.put(
@@ -340,7 +340,7 @@ async def update_urls(
         new_url: str = Query(..., min_length=5),
         db: Session = Depends(get_db)
 ):
-    return await crud.update_urls(db=db, old_url=old_url, new_url=new_url) or await response_code.resp_404()
+    return await crud.update_urls(db=db, old_url=old_url, new_url=new_url)
 
 
 @case_service.put(
@@ -355,7 +355,7 @@ async def name_edit(un: schemas.UpdateName, db: Session = Depends(get_db)):
         db=db,
         case_id=un.case_id,
         new_name=un.new_name
-    ) or await response_code.resp_404()
+    )
 
 
 @case_service.get(
@@ -366,7 +366,7 @@ async def name_edit(un: schemas.UpdateName, db: Session = Depends(get_db)):
     name='按用例/序号查看API数据'
 )
 async def get_api_info(case_id: int, number: int, db: Session = Depends(get_db)):
-    return await crud.get_api_info(db=db, case_id=case_id, number=number) or await response_code.resp_404()
+    return await crud.get_api_info(db=db, case_id=case_id, number=number)
 
 
 @case_service.put(
@@ -377,7 +377,7 @@ async def put_api_info(api_info: schemas.TestCaseDataOut1, db: Session = Depends
     if await crud.update_api_info(db=db, api_info=api_info):
         return await response_code.resp_200()
     else:
-        return await response_code.resp_404(message='修改失败，未获取到内容')
+        return await response_code.resp_400(message='修改失败，未获取到内容')
 
 
 @case_service.put(
@@ -390,7 +390,7 @@ async def swap_one(one: schemas.SwapOne, db: Session = Depends(get_db)):
     """
     case_data = await crud.get_case_data(db=db, case_id=one.case_id)
     if not case_data:
-        return await response_code.resp_404(message='没有获取到这个用例id')
+        return case_data
 
     # 判断序号
     numbers = {x.number: x.id for x in case_data}
@@ -422,7 +422,7 @@ async def swap_many(many: schemas.SwapMany, db: Session = Depends(get_db)):
     """
     case_data = await crud.get_case_data(db=db, case_id=many.case_id)
     if not case_data:
-        return await response_code.resp_404(message='没有获取到这个用例id')
+        return case_data
 
     if len(set(many.new_numbers)) != len(case_data):
         return await response_code.resp_400(
@@ -467,7 +467,7 @@ async def set_api_config(sac: schemas.SetApiConfig, db: Session = Depends(get_db
 
     case_data = await crud.get_case_data(db=db, case_id=sac.case_id, number=sac.number)
     if not case_data:
-        return await response_code.resp_404(message='没有获取到这个用例配置')
+        return await response_code.resp_400(message='没有获取到这个用例配置')
 
     new_config = {k: v for k, v in sac.config if v is not None and v != []}
 
@@ -489,7 +489,7 @@ async def set_api_description(sad: schemas.SetApiDescription, db: Session = Depe
 
     case_data = await crud.get_case_data(db=db, case_id=sad.case_id, number=sad.number)
     if not case_data:
-        return await response_code.resp_404(message='没有获取到这个用例描述')
+        return await response_code.resp_400(message='没有获取到这个用例描述')
 
     await crud.set_case_description(db=db, case_id=sad.case_id, number=sad.number, description=sad.description)
 
@@ -506,7 +506,7 @@ async def set_api_check(sac: schemas.SetApiCheck, db: Session = Depends(get_db))
     """
     case_data = await crud.get_case_data(db=db, case_id=sac.case_id, number=sac.number)
     if not case_data:
-        return await response_code.resp_404(message='没有获取到这个用例配置')
+        return await response_code.resp_400(message='没有获取到这个用例配置')
 
     if not sac.check.key:
         return await response_code.resp_400(message='无效的key')
@@ -549,7 +549,7 @@ async def set_params_data(spd: schemas.SedParamsData, db: Session = Depends(get_
     """
     case_data = await crud.get_case_data(db=db, case_id=spd.case_id, number=spd.number)
     if not case_data:
-        return await response_code.resp_404(message='没有获取到这个用例数据')
+        return await response_code.resp_400(message='没有获取到这个用例数据')
 
     if spd.type.lower() == 'params':
         await crud.set_case_info(db=db, case_id=spd.case_id, number=spd.number, params=spd.data_info)
@@ -570,7 +570,7 @@ async def set_api_check(sac: schemas.setApiHeader, db: Session = Depends(get_db)
     """
     case_data = await crud.get_case_data(db=db, case_id=sac.case_id, number=sac.number)
     if not case_data:
-        return await response_code.resp_404(message='没有获取到这个用例请求头')
+        return await response_code.resp_400(message='没有获取到这个用例请求头')
 
     headers_info = case_data[0].headers
     key_ = sac.header.key.strip()
@@ -602,7 +602,7 @@ async def get_response_json_path(
     """
     case_info = await crud.get_case_info(db=db, case_id=case_id)
     if not case_info:
-        return await response_code.resp_404(message='没有获取到这个用例id')
+        return await case_info
 
     temp_data = await temp_crud.get_template_data(db=db, temp_id=case_info[0].temp_id)
     value_list = ExtractParamsPath.get_value_path(
@@ -614,7 +614,7 @@ async def get_response_json_path(
     )
     return await response_code.resp_200(
         data=value_list
-    ) if value_list.get('extract_contents') else await response_code.resp_404()
+    )
 
 
 @case_service.get(
@@ -634,7 +634,7 @@ async def get_case_data_json_path(
 
     case_info = await crud.get_case_info(db=db, case_id=case_id)
     if not case_info:
-        return await response_code.resp_404(message='没有获取到这个用例id')
+        return await response_code.resp_400(message='没有获取到这个用例id')
 
     case_data = await crud.get_case_data(db=db, case_id=case_id)
 
@@ -684,7 +684,7 @@ async def get_case_data_json_path(
                     headers_list['extract_contents'],
             )
     ):
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     return await response_code.resp_200(
         data={
@@ -720,10 +720,10 @@ async def replace_one_casedata(
 
     case_info = await crud.get_case_data(db=db, case_id=case_id)
     if not case_info:
-        return await response_code.resp_404(message='没有获取到这个用例id')
+        return await response_code.resp_400(message='没有获取到这个用例id')
 
     if number not in [x.number for x in case_info]:
-        return await response_code.resp_404(message='这个用例没有这个number')
+        return await response_code.resp_400(message='这个用例没有这个number')
 
     if rep:
         await crud.set_case_data(
@@ -757,7 +757,7 @@ async def copy_case(case_id: int, db: Session = Depends(get_db)):
     """
     case_info = await crud.get_case_info(db=db, case_id=case_id)
     if not case_info:
-        return await response_code.resp_404(message='没有获取到这个用例id')
+        return await response_code.resp_400(message='没有获取到这个用例id')
 
     case_name = case_info[0].case_name + ' - 副本'
     case_data = await crud.get_case_data(db=db, case_id=case_id)
@@ -787,7 +787,7 @@ async def copy_case(case_id: int, db: Session = Depends(get_db)):
 async def get_response(case_id: int, number: int, type_: str, db: Session = Depends(get_db)):
     case_info = await crud.get_case_info(db=db, case_id=case_id)
     if not case_info:
-        return await response_code.resp_404(message='没有获取到这个用例id')
+        return case_info
 
     temp_info = await temp_crud.get_template_data(db=db, temp_id=case_info[0].temp_id, numbers=[number])
 
@@ -809,7 +809,7 @@ async def get_response(case_id: int, number: int, type_: str, db: Session = Depe
 async def get_jsonpath(case_id: int, db: Session = Depends(get_db)):
     case_info = await crud.get_case_info(db=db, case_id=case_id)
     if not case_info:
-        return await response_code.resp_404(message='没有获取到这个用例id')
+        return case_info
 
     case_list = await crud.get_case_data(db=db, case_id=case_info[0].id)
 

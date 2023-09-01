@@ -56,7 +56,7 @@ async def get_setting(setting_id: int = None, db: Session = Depends(get_db)):
 )
 async def update_setting(setting_id: int, name: str, db: Session = Depends(get_db)):
     if not await crud.get_setting(db=db, id_=setting_id):
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     return await crud.update_setting_name(db=db, id_=setting_id, name=name)
 
@@ -78,7 +78,7 @@ async def update_setting(
 ):
     setting_info = await crud.get_setting(db=db, id_=setting_id)
     if not setting_info:
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     await check_setting(bind=bind, id_=api_case, ids=setting_info[0].api_case_ids)
     await check_setting(bind=bind, id_=ui_case, ids=setting_info[0].ui_case_ids)
@@ -104,7 +104,7 @@ async def update_setting(
 )
 async def del_setting(setting_id: int, db: Session = Depends(get_db)):
     if not await crud.get_setting(db=db, id_=setting_id):
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     await crud.del_setting(db=db, id_=setting_id)
     return await response_code.resp_200()

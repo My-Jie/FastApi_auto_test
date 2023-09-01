@@ -41,7 +41,7 @@ async def url_for_data(method: str, path: str, db: Session = Depends(get_db)):
         'path': x[3],
         'params': x[4],
         'data': x[5],
-    } for x in temp_info] if temp_info else await response_code.resp_404()
+    } for x in temp_info]
 
 
 @own_rep.get(
@@ -59,7 +59,7 @@ async def temp_for_case_data(temp_id: int, number: int, db: Session = Depends(ge
         'path': x[2],
         'params': x[3],
         'data': x[4],
-    } for x in db_info] if db_info else await response_code.resp_400()
+    } for x in db_info]
 
 
 @own_rep.put(
@@ -73,7 +73,7 @@ async def url_edit(ue: schemas.UrlEdit, db: Session = Depends(get_db)):
     if ue.temp_id:
         template_data = await t_crud.get_temp_name(db=db, temp_id=ue.temp_id)
         if not template_data:
-            return await response_code.resp_404(message='没有获取到这个模板id')
+            return await response_code.resp_400(message='没有获取到这个模板id')
 
         if ue.rep_url:
             await crud.temp_rep_url_edit(
@@ -97,7 +97,7 @@ async def url_edit(ue: schemas.UrlEdit, db: Session = Depends(get_db)):
     if ue.case_id:
         case_info = await c_crud.get_case_info(db=db, case_id=ue.case_id)
         if not case_info:
-            return await response_code.resp_404(message='没有获取到这个用例id')
+            return await response_code.resp_400(message='没有获取到这个用例id')
 
         if ue.rep_url:
             await crud.case_rep_url_edit(
@@ -132,7 +132,7 @@ async def params_add(pa: schemas.ParamsAdd, db: Session = Depends(get_db)):
     if pa.temp_id:
         template_data = await t_crud.get_template_data(db=db, temp_id=pa.temp_id)
         if not template_data:
-            return await response_code.resp_404(message='没有获取到这个模板id')
+            return template_data
 
         if pa.rep_params_add:
             try:
@@ -153,7 +153,7 @@ async def params_add(pa: schemas.ParamsAdd, db: Session = Depends(get_db)):
     if pa.case_id:
         case_data = await c_crud.get_case_data(db=db, case_id=pa.case_id)
         if not case_data:
-            return await response_code.resp_404(message='没有获取到这个用例id')
+            return case_data
 
         if pa.rep_params_add:
             try:
@@ -185,7 +185,7 @@ async def params_edit(pe: schemas.ParamsEdit, db: Session = Depends(get_db)):
     if pe.temp_id:
         template_data = await t_crud.get_template_data(db=db, temp_id=pe.temp_id)
         if not template_data:
-            return await response_code.resp_404(message='没有获取到这个模板id')
+            return template_data
 
         if pe.rep_params_edit:
             new_params = dict_edit(
@@ -208,7 +208,7 @@ async def params_edit(pe: schemas.ParamsEdit, db: Session = Depends(get_db)):
     if pe.case_id:
         case_data = await c_crud.get_case_data(db=db, case_id=pe.case_id)
         if not case_data:
-            return await response_code.resp_404(message='没有获取到这个用例id')
+            return case_data
 
         if pe.rep_params_edit:
             new_params = dict_edit(
@@ -242,7 +242,7 @@ async def params_del(pd: schemas.ParamsDel, db: Session = Depends(get_db)):
     if pd.temp_id:
         template_data = await t_crud.get_template_data(db=db, temp_id=pd.temp_id)
         if not template_data:
-            return await response_code.resp_404(message='没有获取到这个模板id')
+            return template_data
 
         if pd.rep_params_del:
             new_params = dict_del(old_key=pd.key, dict_data=template_data[pd.number].params)
@@ -254,7 +254,7 @@ async def params_del(pd: schemas.ParamsDel, db: Session = Depends(get_db)):
     if pd.case_id:
         case_data = await c_crud.get_case_data(db=db, case_id=pd.case_id)
         if not case_data:
-            return await response_code.resp_404(message='没有获取到这个用例id')
+            return case_data
 
         if pd.rep_params_del:
             new_params = dict_del(old_key=pd.key, dict_data=case_data[pd.number].params)
@@ -279,7 +279,7 @@ async def data_add(da: schemas.DataAdd, db: Session = Depends(get_db)):
     if da.temp_id:
         template_data = await t_crud.get_template_data(db=db, temp_id=da.temp_id)
         if not template_data:
-            return await response_code.resp_404(message='没有获取到这个模板id')
+            return template_data
 
         if da.rep_data_add:
             try:
@@ -300,7 +300,7 @@ async def data_add(da: schemas.DataAdd, db: Session = Depends(get_db)):
     if da.case_id:
         case_data = await c_crud.get_case_data(db=db, case_id=da.case_id)
         if not case_data:
-            return await response_code.resp_404(message='没有获取到这个用例id')
+            return case_data
 
         if da.rep_data_add:
             try:
@@ -332,7 +332,7 @@ async def data_edit(de: schemas.DataEdit, db: Session = Depends(get_db)):
     if de.temp_id:
         template_data = await t_crud.get_template_data(db=db, temp_id=de.temp_id)
         if not template_data:
-            return await response_code.resp_404(message='没有获取到这个模板id')
+            return template_data
 
         if de.rep_data_edit:
             new_data = dict_edit(
@@ -355,7 +355,7 @@ async def data_edit(de: schemas.DataEdit, db: Session = Depends(get_db)):
     if de.case_id:
         case_data = await c_crud.get_case_data(db=db, case_id=de.case_id)
         if not case_data:
-            return await response_code.resp_404(message='没有获取到这个用例id')
+            return case_data
 
         if de.rep_data_edit:
             new_data = dict_edit(
@@ -388,7 +388,7 @@ async def data_del(dd: schemas.DataDel, db: Session = Depends(get_db)):
     if dd.temp_id:
         template_data = await t_crud.get_template_data(db=db, temp_id=dd.temp_id)
         if not template_data:
-            return await response_code.resp_404(message='没有获取到这个模板id')
+            return template_data
 
         if dd.rep_data_del:
             new_data = dict_del(old_key=dd.key, dict_data=template_data[dd.number].data)
@@ -400,7 +400,7 @@ async def data_del(dd: schemas.DataDel, db: Session = Depends(get_db)):
     if dd.case_id:
         case_data = await c_crud.get_case_data(db=db, case_id=dd.case_id)
         if not case_data:
-            return await response_code.resp_404(message='没有获取到这个用例id')
+            return case_data
 
         if dd.rep_data_del:
             new_data = dict_del(old_key=dd.key, dict_data=case_data[dd.number].data)

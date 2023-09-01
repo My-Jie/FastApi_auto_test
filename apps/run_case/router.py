@@ -76,7 +76,7 @@ async def run_case_name(temp_ids: List[int], db: Session = Depends(get_db)):
             all_case_list.append(y[0])
 
     if not all_case_list:
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     # 按模板并发
     tasks = [asyncio.create_task(run_service_case(db=db, case_ids=[case_id])) for case_id in all_case_list]
@@ -99,7 +99,7 @@ async def run_case_gather(rcs: schemas.RunCaseGather, db: Session = Depends(get_
     """
     gather_data = await gather_crud.get_gather(db=db, case_id=rcs.case_id, suite=rcs.suite)
     if not gather_data:
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     if SETTING_LIST.get(rcs.setting_list_id):
         del SETTING_LIST[rcs.setting_list_id]
@@ -210,7 +210,7 @@ async def ui_temp(rut: schemas.RunUiTemp, db: Session = Depends(get_db)):
             background=BackgroundTask(lambda: os.remove(report['tmp_file']))
         )
     else:
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
 
 @run_case.get(
@@ -238,7 +238,7 @@ async def get_api_setting_info(case_id: int, db: Session = Depends(get_db)):
     """
     case_info = await case_crud.get_case_info(db=db, case_id=case_id)
     if not case_info:
-        return response_code.resp_404()
+        return case_info
 
     # 获取模板中的原始host
     hosts = await crud.get_temp_host(db=db, temp_id=case_info[0].temp_id)
@@ -320,7 +320,7 @@ async def get_ui_setting_info(case_id: int, db: Session = Depends(get_db)):
     """
     case_info = await ui_crud.get_playwright(db=db, temp_id=case_id)
     if not case_info:
-        return response_code.resp_404()
+        return case_info
 
     # 获取环境配置信息，并把配置信息处理成dict
     setting_info = await setting_crud.get_setting(db=db)
@@ -376,7 +376,7 @@ async def set_api_setting_info(
         return
 
     if not SETTING_LIST.get(setting_list_id):
-        return await response_code.resp_404(message='没有这个环境数据缓存')
+        return await response_code.resp_400(message='没有这个环境数据缓存')
 
     for x in SETTING_LIST[setting_list_id]:
         if x['id_card'] == id_card:
@@ -393,7 +393,7 @@ async def set_api_setting_info(
 
             break
     else:
-        return await response_code.resp_404(message='没有这个环境数据缓存选项')
+        return await response_code.resp_400(message='没有这个环境数据缓存选项')
 
     return await response_code.resp_200()
 

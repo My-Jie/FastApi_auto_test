@@ -68,7 +68,7 @@ async def get_playwright_data(temp_id: int, db: Session = Depends(get_db)):
     获取playwright详情
     """
     temp_info = await crud.get_playwright(db=db, temp_id=temp_id)
-    return temp_info[0] or await response_code.resp_404()
+    return temp_info[0]
 
 
 @case_ui.get(
@@ -89,11 +89,11 @@ async def get_playwright_list(
     """
     temp_info = await crud.get_playwright(db=db, temp_name=temp_name, like=True, page=page, size=size)
     return {
-               'items': list(temp_info),
-               'total': await crud.get_count(db=db, temp_name=temp_name),
-               'page': page,
-               'size': size
-           } or await response_code.resp_404()
+        'items': list(temp_info),
+        'total': await crud.get_count(db=db, temp_name=temp_name),
+        'page': page,
+        'size': size
+    }
 
 
 @case_ui.get(
@@ -110,9 +110,9 @@ async def get_playwright_case(temp_id: int, db: Session = Depends(get_db)):
         if data:
             return await response_code.resp_200(data=data)
         else:
-            return await response_code.resp_404(message='没有提取到内容')
+            return data
     else:
-        return await response_code.resp_404()
+        return temp_info
 
 
 @case_ui.get(
@@ -152,9 +152,9 @@ async def down_playwright_data(temp_id: int, db: Session = Depends(get_db)):
                     background=BackgroundTask(lambda: os.remove(path))
                 )
             else:
-                return await response_code.resp_404(message='没有提取到内容')
+                return await response_code.resp_400(message='没有提取到内容')
     else:
-        return await response_code.resp_404()
+        return temp_info
 
 
 @case_ui.post(
@@ -174,7 +174,7 @@ async def upload_data_gather(
 
     temp_data = await crud.get_playwright(db=db, temp_id=temp_id)
     if not temp_data:
-        return await response_code.resp_404(message='没有获取到这个模板id')
+        return await response_code.resp_400(message='没有获取到这个模板id')
 
     path = f'./files/excel/{time.strftime("%Y%m%d%H%M%S", time.localtime(time.time()))}.xlsx'
     # 写入本地
@@ -222,9 +222,9 @@ async def get_playwright_gather(temp_id: int, db: Session = Depends(get_db)):
                 x.rows_data = [{y['row']: y['data']} for y in x.rows_data]
             return case_info
         else:
-            return await response_code.resp_404(message='没有提取到内容')
+            return case_info
     else:
-        return await response_code.resp_404()
+        return temp_info
 
 
 @case_ui.get(
@@ -252,7 +252,7 @@ async def get_remote_browsers():
 async def copy_case(temp_id: int, db: Session = Depends(get_db)):
     temp_info = await crud.get_playwright(db=db, temp_id=temp_id)
     if not temp_info:
-        return await response_code.resp_404(message='没有获取到这个用例id')
+        return await response_code.resp_400(message='没有获取到这个用例id')
 
     await crud.create_playwright(
         db=db,

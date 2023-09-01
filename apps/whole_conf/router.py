@@ -50,7 +50,7 @@ async def get_host(host_id: int = None, db: Session = Depends(get_db)):
 )
 async def update_host(host_id: int, conf_host: schemas.ConfHostIn, db: Session = Depends(get_db)):
     if not await crud.get_host(db=db, id_=host_id):
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     await crud.update_host(db=db, id_=host_id, conf_host=conf_host)
     return await response_code.resp_200()
@@ -62,7 +62,7 @@ async def update_host(host_id: int, conf_host: schemas.ConfHostIn, db: Session =
 )
 async def del_host(host_id: int, db: Session = Depends(get_db)):
     if not await crud.get_host(db=db, id_=host_id):
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     await crud.del_host(db=db, id_=host_id)
     return await response_code.resp_200()
@@ -100,7 +100,7 @@ async def get_project(project_id: int = None, db: Session = Depends(get_db)):
 )
 async def update_project(project_id: int, conf_project: schemas.ConfProjectIn, db: Session = Depends(get_db)):
     if not await crud.get_project(db=db, id_=project_id):
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     await crud.update_project(db=db, id_=project_id, conf_project=conf_project)
     return await response_code.resp_200()
@@ -112,7 +112,7 @@ async def update_project(project_id: int, conf_project: schemas.ConfProjectIn, d
 )
 async def del_project(project_id: int, db: Session = Depends(get_db)):
     if not await crud.get_project(db=db, id_=project_id):
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     await crud.del_project(db=db, id_=project_id)
     return await response_code.resp_200()
@@ -150,7 +150,7 @@ async def get_db_(db_id: int = None, db: Session = Depends(get_db)):
 )
 async def update_db(db_id: int, conf_db: schemas.ConfDBIn, db: Session = Depends(get_db)):
     if not await crud.get_db(db=db, id_=db_id):
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     await crud.update_db(db=db, id_=db_id, conf_db=conf_db)
     return await response_code.resp_200()
@@ -162,7 +162,7 @@ async def update_db(db_id: int, conf_db: schemas.ConfDBIn, db: Session = Depends
 )
 async def del_db(db_id: int, db: Session = Depends(get_db)):
     if not await crud.get_db(db=db, id_=db_id):
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     await crud.del_db(db=db, id_=db_id)
     return await response_code.resp_200()
@@ -205,7 +205,7 @@ async def get_unify(unify_res_id: int = None, db: Session = Depends(get_db)):
 )
 async def update_unify(unify_res_id: int, conf_unify_res: schemas.ConfUnifyResIn, db: Session = Depends(get_db)):
     if not await crud.get_unify_res(db=db, id_=unify_res_id):
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     try:
         check(enum=conf_unify_res)
@@ -222,7 +222,7 @@ async def update_unify(unify_res_id: int, conf_unify_res: schemas.ConfUnifyResIn
 )
 async def del_unify(unify_res_id: int, db: Session = Depends(get_db)):
     if not await crud.get_unify_res(db=db, id_=unify_res_id):
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     await crud.del_unify_res(db=db, id_=unify_res_id)
     return await response_code.resp_200()
@@ -264,7 +264,7 @@ async def get_customize(customize_id: int = None, db: Session = Depends(get_db))
 )
 async def update_customize(customize_id: int, conf_customize: schemas.ConfCustomizeIn, db: Session = Depends(get_db)):
     if not await crud.get_customize(db=db, id_=customize_id):
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     try:
         check(enum=conf_customize)
@@ -281,7 +281,7 @@ async def update_customize(customize_id: int, conf_customize: schemas.ConfCustom
 )
 async def del_customize(customize_id: int, db: Session = Depends(get_db)):
     if not await crud.get_customize(db=db, id_=customize_id):
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
     await crud.del_customize(db=db, id_=customize_id)
     return await response_code.resp_200()

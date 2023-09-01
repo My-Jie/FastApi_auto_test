@@ -185,7 +185,7 @@ async def insert_har(
     har_data = await ParseData.pares_data(har_data=file.file.read(), har_type=schemas.HarType.charles)
     template_data = await crud.get_template_data(db=db, temp_id=temp_id)
     if not template_data:
-        return await response_code.resp_404(message='没有获取到这个模板id')
+        return await response_code.resp_400(message='没有获取到这个模板id')
 
     try:
         num_list = await check_num(nums=numbers, har_data=har_data, template_data=template_data)
@@ -242,7 +242,7 @@ async def swap_data_one(sdo: schemas.SwapDataOne, db: Session = Depends(get_db))
     """
     template_data = await crud.get_template_data(db=db, temp_id=sdo.temp_id)
     if not template_data:
-        return await response_code.resp_404(message='没有获取到这个模板id')
+        return await response_code.resp_400(message='没有获取到这个模板id')
 
     # 判断序号
     numbers = {x.number: x.id for x in template_data}
@@ -274,7 +274,7 @@ async def swap_data_many(sdm: schemas.SwapDataMany, db: Session = Depends(get_db
     """
     template_data = await crud.get_template_data(db=db, temp_id=sdm.temp_id)
     if not template_data:
-        return await response_code.resp_404(message='没有获取到这个模板id')
+        return await response_code.resp_400(message='没有获取到这个模板id')
 
     if len(set(sdm.new_numbers)) != len(template_data):
         return await response_code.resp_400(
@@ -325,7 +325,7 @@ async def del_har(
 ):
     template_data = await crud.get_template_data(db=db, temp_id=temp_id)
     if not template_data:
-        return await response_code.resp_404(message='没有获取到这个模板id')
+        return await response_code.resp_400(message='没有获取到这个模板id')
 
     try:
         num_list = await check_num(nums=numbers, template_data=template_data)
@@ -372,7 +372,7 @@ async def delete_name(temp_id: int, db: Session = Depends(get_db)):
             else:
                 return await response_code.resp_400()
     else:
-        return await response_code.resp_404()
+        return await response_code.resp_400()
 
 
 @template.get(
@@ -420,11 +420,11 @@ async def get_templates(
         out_info.append(temp_info)
 
     return {
-               'items': out_info,
-               'total': await crud.get_count(db=db, temp_name=temp_name),
-               'page': page,
-               'size': size
-           } or await response_code.resp_404()
+        'items': out_info,
+        'total': await crud.get_count(db=db, temp_name=temp_name),
+        'page': page,
+        'size': size
+    }
 
 
 @template.put(
@@ -441,7 +441,7 @@ async def update_name(un: schemas.UpdateName, db: Session = Depends(get_db)):
         db=db,
         temp_id=un.temp_id,
         new_name=un.new_name
-    ) or await response_code.resp_404()
+    ) or await response_code.resp_400()
 
 
 @template.get(
@@ -462,8 +462,6 @@ async def get_template_data(temp_name: str = None, temp_id: int = None, db: Sess
     if temp_id:
         return await crud.get_template_data(db=db, temp_id=temp_id)
 
-    return await response_code.resp_400()
-
 
 @template.get(
     '/data/host/list',
@@ -474,10 +472,7 @@ async def get_temp_host_list(temp_id: int, db: Session = Depends(get_db)):
     查询模板的host列表
     """
     hosts = await crud.get_temp_host(db=db, temp_id=temp_id)
-    if hosts:
-        return hosts
-    else:
-        return await response_code.resp_404()
+    return hosts
 
 
 @template.post(
@@ -531,7 +526,7 @@ async def create_new_temp(
                 'response': temp_info.response,
             })
         else:
-            return await response_code.resp_404(message=f'未查到的模板信息：{x}')
+            return await response_code.resp_400(message=f'未查到的模板信息：{x}')
 
     # 创建主表数据
     db_template = await crud.create_template(db=db, temp_name=temp_name, project_name=project_name)
@@ -621,7 +616,7 @@ async def edit_api(api_info: schemas.TemplateDataInTwo, db: Session = Depends(ge
     if await crud.update_api_info(db=db, api_info=api_info):
         return await response_code.resp_200()
     else:
-        return await response_code.resp_404(message='修改失败，未获取到内容')
+        return await response_code.resp_400(message='修改失败，未获取到内容')
 
 
 @template.delete(
@@ -634,7 +629,7 @@ async def del_api(temp_id: int, number: int, db: Session = Depends(get_db)):
     """
     temp_info = await crud.get_template_data(db=db, temp_id=temp_id, numbers=[number])
     if not temp_info:
-        return await response_code.resp_404(message='没有获取到这个模板api数据')
+        return await response_code.resp_400(message='没有获取到这个模板api数据')
 
     # 删除数据
     await crud.del_template_data(db=db, temp_id=temp_id, number=number)
@@ -734,4 +729,4 @@ async def download_temp_excel(temp_id: int, db: Session = Depends(get_db)):
             filename=f'{temp_name}.xlsx',
             background=BackgroundTask(lambda: os.remove(path))
         )
-    return await response_code.resp_404()
+    return await response_code.resp_400()
