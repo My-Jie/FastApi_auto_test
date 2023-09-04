@@ -78,6 +78,16 @@
     
 [随便测测-做UI测试](https://blog.csdn.net/yangj507/article/details/131579327)
 
+## v2.4.7ui用例也支持批量选择数据集执行了
+![image](img/1693836296042.jpg)
+* 和api用例几乎相同的操作模式
+* 支持同步、并行异步执行ui用例(目前异步执行allure报告还有问题)
+
+## v2.4.6Jsonpath数据引用追踪
+![image](img/1693835948634.jpg)
+* 可以看到一个jsonpath用在了哪些接口(number)的哪些位置(path\params\data\headers\check)
+* 简单操作jsonpath(正在做...大概会有恢复数据、批量修改功能)
+
 ## v2.4.5增加cURL(bash)解析
 ![image](img/1692978076215.jpg)
 * 后端python解析，返回到前端

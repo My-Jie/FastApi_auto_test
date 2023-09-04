@@ -7,6 +7,7 @@
 @Time: 2022/9/28-17:15
 """
 
+import re
 import time
 import copy
 from aiohttp.client_exceptions import (
@@ -16,15 +17,20 @@ from aiohttp.client_exceptions import (
     ClientConnectorError,
     ClientOSError
 )
+from typing import List
 from sqlalchemy.orm import Session
 from apps.case_service import crud as case_crud
 from apps.template import crud as temp_crud
+from apps.whole_conf import crud as conf_crud
 from apps.case_ui import crud as ui_crud
 from apps.run_case.tool import RunApi, run
 from tools.load_allure import load_allure_report
-from tools.faker_data import FakerData
 from tools.read_setting import setting
 from apps.run_case.tool.header_host import whole_host
+from apps.run_case.tool.run_ui import run_ui
+from apps.run_case import SETTING_INFO_DICT, schemas
+from .check_data import check_customize
+from .header_playwright import replace_playwright
 
 
 async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict = None):
@@ -180,44 +186,57 @@ async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_
     return report
 
 
-async def run_ui_case(db: Session, playwright_text: str, temp_id: int):
-    """
-    生成临时py脚本
-    :param db:
-    :param playwright_text:
-    :param temp_id:
-    :return:
-    """
+async def run_ui_case(db: Session, rut: schemas.RunUiTemp, ui_temp_info: list):
+    file_name = f"temp_id_{ui_temp_info[0].id}_{time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))}"
 
-    # 写入临时的py文件
-    f = FakerData()
-    path = f'./files/tmp/{int(time.time() * 1000)}_{f.faker_data("random_lower", 6)}.py'
-    with open(path, 'w', encoding='utf-8') as w:
-        w.write(playwright_text)
+    # 从环境配置里面取数据
+    setting_info_dict = SETTING_INFO_DICT.get(rut.setting_list_id, {})
+    customize = await check_customize(setting_info_dict.get('customize', {}))
 
-    case_info = await ui_crud.get_playwright(db=db, temp_id=temp_id)
+    # 自定参数提取
+    temp_text = ui_temp_info[0].text
+    replace_key: List[str] = re.compile(r'%{{(.*?)}}', re.S).findall(temp_text)
+    for key in replace_key:
+        value = customize.get(key, '_')
+        if value == '_':
+            customize_info = await conf_crud.get_customize(
+                db=db,
+                key=key
+            )
+            value = customize_info[0].value if customize_info else None
 
-    # 校验结果，生成报告
-    allure_dir = setting['allure_path_ui']
-    await run(
-        test_path=path,
-        allure_dir=allure_dir,
-        report_url=setting['host'],
-        case_name=case_info[0].temp_name,
-        case_id=temp_id,
-        run_order=case_info[0].run_order + 1,
-        ui=True
-    )
+        temp_text = re.sub("%{{(.*?)}}", str(value), temp_text, count=1)
 
-    case_info = await ui_crud.update_ui_temp_order(db=db, temp_id=temp_id, is_fail=False)
-    await load_allure_report(allure_dir=allure_dir, case_id=temp_id, run_order=case_info.run_order, ui=True)
+    if rut.gather_id:
+        case_info = await ui_crud.get_play_case_data(db=db, case_id=rut.gather_id, temp_id=rut.temp_id)
 
-    return {
-        'temp_id': case_info.id,
-        'report': f'/ui/allure/{case_info.id}/{case_info.run_order}',
-        'is_fail': True,
-        'run_order': case_info.run_order,
-        'success': case_info.success,
-        'fail': case_info.fail,
-        'tmp_file': path
-    }
+        # 替换测试数据
+        temp_text = temp_text.split('\n')
+        for x in case_info[0].rows_data:
+            temp_text[x['row'] - 1] = re.sub(r'{{(.*?)}}', x['data'], temp_text[x['row'] - 1], 1)
+
+        playwright = await replace_playwright(
+            playwright_text='\n'.join(temp_text),
+            temp_name=ui_temp_info[0].temp_name,
+            remote=rut.remote,
+            remote_id=rut.remote_id,
+            headless=rut.headless,
+            file_name=file_name
+        )
+    else:
+        playwright = await replace_playwright(
+            playwright_text=temp_text,
+            temp_name=ui_temp_info[0].temp_name,
+            remote=rut.remote,
+            remote_id=rut.remote_id,
+            headless=rut.headless,
+            file_name=file_name
+        )
+
+    if not playwright:
+        raise Exception('由于连接方在一段时间后没有正确答复或连接的主机没有反应，连接尝试失败')
+
+    report = await run_ui(db=db, playwright_text=playwright, temp_id=rut.temp_id)
+    report['video'] = f"http://{setting['selenoid']['selenoid_ui_host']}/video/{file_name}.mp4"
+
+    return report

@@ -7,7 +7,6 @@
 @Time: 2022/8/23-13:45
 """
 
-import re
 import os
 import time
 import random
@@ -25,8 +24,7 @@ from apps.case_ui import crud as ui_crud
 from apps.run_case import schemas, CASE_STATUS, SETTING_INFO_DICT, CASE_RESPONSE, CASE_RESULT
 from apps.setting_bind import crud as setting_crud
 from apps.whole_conf import crud as conf_crud
-from .tool import run_service_case, run_ddt_case, run_ui_case, header, replace_playwright, check_customize
-from tools.read_setting import setting
+from .tool import run_service_case, run_ddt_case, run_ui_case, header
 
 run_case = APIRouter()
 
@@ -154,63 +152,55 @@ async def ui_temp(rut: schemas.RunUiTemp, db: Session = Depends(get_db)):
     """
     ui_temp_info = await ui_crud.get_playwright(db=db, temp_id=rut.temp_id)
     if ui_temp_info:
-        file_name = f"temp_id_{ui_temp_info[0].id}_{time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))}"
 
-        # 从环境配置里面取数据
-        setting_info_dict = SETTING_INFO_DICT.get(rut.setting_list_id, {})
-        customize = await check_customize(setting_info_dict.get('customize', {}))
+        report = await run_ui_case(db=db, rut=rut, ui_temp_info=ui_temp_info)
 
-        # 自定参数提取
-        temp_text = ui_temp_info[0].text
-        replace_key: List[str] = re.compile(r'%{{(.*?)}}', re.S).findall(temp_text)
-        for key in replace_key:
-            value = customize.get(key, '_')
-            if value == '_':
-                customize_info = await conf_crud.get_customize(
-                    db=db,
-                    key=key
-                )
-                value = customize_info[0].value if customize_info else None
-
-            temp_text = re.sub("%{{(.*?)}}", str(value), temp_text, count=1)
-
-        if rut.gather_id:
-            case_info = await ui_crud.get_play_case_data(db=db, case_id=rut.gather_id, temp_id=rut.temp_id)
-
-            # 替换测试数据
-            temp_text = temp_text.split('\n')
-            for x in case_info[0].rows_data:
-                temp_text[x['row'] - 1] = re.sub(r'{{(.*?)}}', x['data'], temp_text[x['row'] - 1], 1)
-
-            playwright = await replace_playwright(
-                playwright_text='\n'.join(temp_text),
-                temp_name=ui_temp_info[0].temp_name,
-                remote=rut.remote,
-                remote_id=rut.remote_id,
-                headless=rut.headless,
-                file_name=file_name
-            )
-        else:
-            playwright = await replace_playwright(
-                playwright_text=temp_text,
-                temp_name=ui_temp_info[0].temp_name,
-                remote=rut.remote,
-                remote_id=rut.remote_id,
-                headless=rut.headless,
-                file_name=file_name
-            )
-
-        if not playwright:
-            return await response_code.resp_400(message='由于连接方在一段时间后没有正确答复或连接的主机没有反应，连接尝试失败')
-
-        report = await run_ui_case(db=db, playwright_text=playwright, temp_id=rut.temp_id)
-        report['video'] = f"http://{setting['selenoid']['selenoid_ui_host']}/video/{file_name}.mp4"
         return await response_code.resp_200(
             data=report,
             background=BackgroundTask(lambda: os.remove(report['tmp_file']))
         )
     else:
         return await response_code.resp_400()
+
+
+@run_case.post(
+    '/ui/gather',
+    name='执行ui用例集'
+)
+async def ui_gather(rut: schemas.RunUiTempGather, db: Session = Depends(get_db)):
+    """
+    执行ui用例集，可异步可同步
+    """
+    gather_data = await ui_crud.get_play_case_data(db=db, temp_id=rut.temp_id, case_ids=rut.gather_ids)
+    if not gather_data:
+        return await response_code.resp_400()
+
+    ui_temp_info = await ui_crud.get_playwright(db=db, temp_id=rut.temp_id)
+
+    if rut.async_:
+
+        tasks = []
+        for data in gather_data:
+            net_rut = rut
+            net_rut.gather_id = data.id
+            tasks.append(asyncio.create_task(run_ui_case(db=db, rut=net_rut, ui_temp_info=ui_temp_info)))
+        report = await asyncio.gather(*tasks)
+
+        return await response_code.resp_200(
+            data=report,
+            background=BackgroundTask(lambda: [os.remove(x['tmp_file']) for x in report])
+        )
+    else:
+        report = []
+        for data in gather_data:
+            net_rut = rut
+            net_rut.gather_id = data.id
+            report.append(await run_ui_case(db=db, rut=net_rut, ui_temp_info=ui_temp_info))
+
+        return await response_code.resp_200(
+            data=report,
+            background=BackgroundTask(lambda: [os.remove(x['tmp_file']) for x in report])
+        )
 
 
 @run_case.get(

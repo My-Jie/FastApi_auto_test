@@ -40,3 +40,8 @@ class RunUiTemp(BaseModel):
     headless: bool
     gather_id: int = None
     setting_list_id: str = ''
+
+
+class RunUiTempGather(RunUiTemp):
+    gather_ids: List[int] = None
+    async_: Optional[bool] = False

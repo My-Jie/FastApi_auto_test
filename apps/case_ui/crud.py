@@ -109,14 +109,21 @@ async def create_play_case_data(db: Session, data: schemas.PlaywrightDataIn):
     return db_temp
 
 
-async def get_play_case_data(db: Session, case_id: int = None, temp_id: int = None):
+async def get_play_case_data(db: Session, case_id: int = None, temp_id: int = None, case_ids: list = None):
     """
     获取测试用例的数据
     :param db:
     :param case_id:
+    :param case_ids:
     :param temp_id:
     :return:
     """
+    if case_ids and temp_id:
+        return db.query(models.PlaywrightCaseDate).filter(
+            models.PlaywrightCaseDate.temp_id == temp_id,
+            models.PlaywrightCaseDate.id.in_(case_ids)
+        ).all()
+
     if case_id and temp_id:
         return db.query(models.PlaywrightCaseDate).filter(
             models.PlaywrightCaseDate.id == case_id,
