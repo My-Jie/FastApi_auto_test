@@ -9,6 +9,7 @@
 
 import os
 import time
+import copy
 import random
 import asyncio
 from fastapi import APIRouter, Depends
@@ -24,7 +25,9 @@ from apps.case_ui import crud as ui_crud
 from apps.run_case import schemas, CASE_STATUS, SETTING_INFO_DICT, CASE_RESPONSE, CASE_RESULT
 from apps.setting_bind import crud as setting_crud
 from apps.whole_conf import crud as conf_crud
-from .tool import run_service_case, run_ddt_case, run_ui_case, header
+from tools.read_setting import setting
+from tools.load_allure import load_allure_report
+from .tool import run_service_case, run_ddt_case, run_ui_case, header, allure_generate
 
 run_case = APIRouter()
 
@@ -152,8 +155,30 @@ async def ui_temp(rut: schemas.RunUiTemp, db: Session = Depends(get_db)):
     """
     ui_temp_info = await ui_crud.get_playwright(db=db, temp_id=rut.temp_id)
     if ui_temp_info:
+        allure_dir = setting['allure_path_ui']
 
-        report = await run_ui_case(db=db, rut=rut, ui_temp_info=ui_temp_info)
+        # 执行用例
+        report, allure_plus_dir, allure_path, run_order = await run_ui_case(
+            db=db,
+            rut=rut,
+            ui_temp_info=ui_temp_info,
+            allure_dir=allure_dir,
+            up_case_info=await ui_crud.update_ui_temp_order(db=db, temp_id=rut.temp_id, is_fail=False)
+        )
+
+        # 生成报告
+        await allure_generate(
+            allure_plus_dir=allure_plus_dir,
+            run_order=run_order,
+            allure_path=allure_path,
+            report_url=setting['host'],
+            case_name=ui_temp_info[0].temp_name,
+            case_id=ui_temp_info[0].id,
+            ui=True
+        )
+
+        # 加载静态文件
+        await load_allure_report(allure_dir=allure_dir, case_id=rut.temp_id, run_order=run_order, ui=True)
 
         return await response_code.resp_200(
             data=report,
@@ -177,25 +202,75 @@ async def ui_gather(rut: schemas.RunUiTempGather, db: Session = Depends(get_db))
 
     ui_temp_info = await ui_crud.get_playwright(db=db, temp_id=rut.temp_id)
 
+    allure_dir = setting['allure_path_ui']
+
     if rut.async_:
 
+        # 执行用例
         tasks = []
-        for data in gather_data:
+        for i, data in enumerate(gather_data):
             net_rut = rut
             net_rut.gather_id = data.id
-            tasks.append(asyncio.create_task(run_ui_case(db=db, rut=net_rut, ui_temp_info=ui_temp_info)))
-        report = await asyncio.gather(*tasks)
+            tasks.append(asyncio.create_task(run_ui_case(
+                db=db,
+                rut=copy.deepcopy(net_rut),
+                ui_temp_info=ui_temp_info,
+                allure_dir=allure_dir,
+                up_case_info=ui_temp_info[0],
+                i=i + 1
+            )))
+        info = await asyncio.gather(*tasks)
+        await ui_crud.update_ui_temp_order(db=db, temp_id=rut.temp_id, is_fail=False, i=len(gather_data))
+
+        report = []
+        for res, allure_plus_dir, allure_path, run_order in info:
+            # 生成报告
+            await allure_generate(
+                allure_plus_dir=allure_plus_dir,
+                run_order=run_order,
+                allure_path=allure_path,
+                report_url=setting['host'],
+                case_name=ui_temp_info[0].temp_name,
+                case_id=ui_temp_info[0].id,
+                ui=True
+            )
+            report.append(res)
+
+            # 加载静态文件
+            await load_allure_report(allure_dir=allure_dir, case_id=rut.temp_id, run_order=run_order, ui=True)
 
         return await response_code.resp_200(
             data=report,
             background=BackgroundTask(lambda: [os.remove(x['tmp_file']) for x in report])
         )
     else:
+        # 执行用例
         report = []
         for data in gather_data:
             net_rut = rut
             net_rut.gather_id = data.id
-            report.append(await run_ui_case(db=db, rut=net_rut, ui_temp_info=ui_temp_info))
+            res, allure_plus_dir, allure_path, run_order = await run_ui_case(
+                db=db,
+                rut=rut,
+                ui_temp_info=ui_temp_info,
+                allure_dir=allure_dir,
+                up_case_info=await ui_crud.update_ui_temp_order(db=db, temp_id=rut.temp_id, is_fail=False)
+            )
+            report.append(res)
+
+            # 生成报告
+            await allure_generate(
+                allure_plus_dir=allure_plus_dir,
+                run_order=run_order,
+                allure_path=allure_path,
+                report_url=setting['host'],
+                case_name=ui_temp_info[0].temp_name,
+                case_id=ui_temp_info[0].id,
+                ui=True
+            )
+
+            # 加载静态文件
+            await load_allure_report(allure_dir=allure_dir, case_id=rut.temp_id, run_order=run_order, ui=True)
 
         return await response_code.resp_200(
             data=report,

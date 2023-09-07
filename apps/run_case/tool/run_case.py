@@ -23,7 +23,7 @@ from apps.case_service import crud as case_crud
 from apps.template import crud as temp_crud
 from apps.whole_conf import crud as conf_crud
 from apps.case_ui import crud as ui_crud
-from apps.run_case.tool import RunApi, run
+from apps.run_case.tool import RunApi, run, allure_generate
 from tools.load_allure import load_allure_report
 from tools.read_setting import setting
 from apps.run_case.tool.header_host import whole_host
@@ -81,16 +81,24 @@ async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict 
             except IndexError as e:
                 raise Exception(f': {str(e)}')
 
-            # 校验结果，生成报告
             allure_dir = setting['allure_path']
-            await run(
+            # 执行用例
+            allure_plus_dir, allure_path = await run(
                 test_path='./apps/run_case/test_case/test_service.py',
                 allure_dir=allure_dir,
+                case_id=case_id,
+            )
+            # 生成报告
+            await allure_generate(
+                allure_plus_dir=allure_plus_dir,
+                run_order=run_order,
+                allure_path=allure_path,
                 report_url=setting['host'],
                 case_name=case,
                 case_id=case_id,
-                run_order=run_order
+                ui=True
             )
+
             await load_allure_report(allure_dir=allure_dir, case_id=case_id, run_order=run_order)
 
             # report[case_id] = f'{HOST}allure/{case_id}/{run_order}'
@@ -161,19 +169,26 @@ async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_
         except IndexError as e:
             raise Exception(f': {str(e)}')
 
-        # 校验结果，生成报告
         allure_dir = setting['allure_path']
-        await run(
+        # 执行用例
+        allure_plus_dir, allure_path = await run(
             test_path='./apps/run_case/test_case/test_service.py',
             allure_dir=allure_dir,
+            case_id=case_id,
+        )
+        # 生成报告
+        await allure_generate(
+            allure_plus_dir=allure_plus_dir,
+            run_order=run_order,
+            allure_path=allure_path,
             report_url=setting['host'],
             case_name=case,
             case_id=case_id,
-            run_order=run_order
+            ui=True
         )
+
         await load_allure_report(allure_dir=allure_dir, case_id=case_id, run_order=run_order)
 
-        # report[case_id] = f'{HOST}allure/{case_id}/{run_order}'
         report[case_id] = {
             'report': f'/allure/{case_id}/{run_order}',
             'is_fail': is_fail,
@@ -186,7 +201,14 @@ async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_
     return report
 
 
-async def run_ui_case(db: Session, rut: schemas.RunUiTemp, ui_temp_info: list):
+async def run_ui_case(
+        db: Session,
+        rut: schemas.RunUiTemp,
+        ui_temp_info: list,
+        allure_dir: str,
+        up_case_info,
+        i: int = None
+):
     file_name = f"temp_id_{ui_temp_info[0].id}_{time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))}"
 
     # 从环境配置里面取数据
@@ -236,7 +258,19 @@ async def run_ui_case(db: Session, rut: schemas.RunUiTemp, ui_temp_info: list):
     if not playwright:
         raise Exception('由于连接方在一段时间后没有正确答复或连接的主机没有反应，连接尝试失败')
 
-    report = await run_ui(db=db, playwright_text=playwright, temp_id=rut.temp_id)
-    report['video'] = f"http://{setting['selenoid']['selenoid_ui_host']}/video/{file_name}.mp4"
+    allure_plus_dir, allure_path, path = await run_ui(
+        playwright_text=playwright,
+        temp_id=rut.temp_id,
+        allure_dir=allure_dir
+    )
 
-    return report
+    return {
+               'temp_id': up_case_info.id,
+               'report': f'/ui/allure/{up_case_info.id}/{up_case_info.run_order}',
+               'is_fail': True,
+               'run_order': up_case_info.run_order,
+               'success': up_case_info.success,
+               'fail': up_case_info.fail,
+               'tmp_file': path,
+               'video': f"http://{setting['selenoid']['selenoid_ui_host']}/video/{file_name}.mp4"
+           }, allure_plus_dir, allure_path, up_case_info.run_order if i is None else up_case_info.run_order + i

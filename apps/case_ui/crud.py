@@ -161,7 +161,7 @@ async def del_play_case_data(db: Session, case_id: int = None, temp_id: int = No
         return
 
 
-async def update_ui_temp_order(db: Session, temp_id: int, is_fail: bool):
+async def update_ui_temp_order(db: Session, temp_id: int, is_fail: bool, i: int = 1):
     """
     更新用例次数
     :param db:
@@ -170,7 +170,7 @@ async def update_ui_temp_order(db: Session, temp_id: int, is_fail: bool):
     :return:
     """
     db_case = db.query(models.PlaywrightTemp).filter(models.PlaywrightTemp.id == temp_id).first()
-    db_case.run_order = db_case.run_order + 1
+    db_case.run_order = db_case.run_order + i
     if is_fail:
         db_case.fail = db_case.fail + 1
     else:

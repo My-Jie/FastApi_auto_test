@@ -17,29 +17,36 @@ import asyncio
 async def run(
         test_path: str,
         allure_dir: str,
-        report_url,
-        case_name: str,
         case_id: int,
-        run_order: int,
-        ui: bool = False
 ):
     """
     执行测试用例
     :param test_path: test_*.py测试文件路径
     :param allure_dir: allure 报告路径
-    :param report_url: 报告路由
-    :param case_name: 用例名称
     :param case_id: 用例id
-    :param run_order: 运行次数
-    :param ui: 是否是ui报告
     :return:
     """
     allure_plus_dir = os.path.join(allure_dir, str(case_id), 'allure_plus')
     pathlib.Path(allure_plus_dir).mkdir(parents=True, exist_ok=True)
-    allure_path = os.path.join(allure_dir, str(case_id), 'allure', str(int(time.time())))
+    allure_path = os.path.join(allure_dir, str(case_id), 'allure', str(int(time.time() * 1000)))
     command = f'pytest {test_path} -s  --alluredir={allure_path}'
     child = await asyncio.create_subprocess_shell(command)
     await child.wait()
+    return allure_plus_dir, allure_path
+
+
+async def allure_generate(allure_plus_dir, run_order, allure_path, report_url, case_name, case_id, ui):
+    """
+    执行报告
+    :param allure_plus_dir:
+    :param run_order:
+    :param allure_path:
+    :param report_url:
+    :param case_name:
+    :param case_id:
+    :param ui:
+    :return:
+    """
     # 先调用get_dirname()，获取到这次需要构建的次数
     build_order, old_data = get_dirname(allure_plus_dir, run_order)
     # 再执行命令行
