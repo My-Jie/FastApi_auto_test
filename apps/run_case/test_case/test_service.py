@@ -29,8 +29,7 @@ async def get_case_info():
     return queue_info[0].case_name, queue_info[0].case_data
 
 
-loop = asyncio.get_event_loop()
-case_name, case_data = loop.run_until_complete(get_case_info())
+case_name, case_data = asyncio.run(get_case_info())
 
 data_list = [
     [

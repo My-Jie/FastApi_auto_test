@@ -26,6 +26,7 @@ from tools.faker_data import FakerData
 from tools.read_setting import setting
 from apps.template import schemas as temp
 from apps.case_service import schemas as service
+from apps.case_service import crud as service_crud
 from apps.run_case import crud
 from apps.run_case import CASE_STATUS, CASE_RESPONSE, CASE_RESULT
 from .check_data import check_customize
@@ -175,7 +176,7 @@ class RunApi:
             # 轮询执行接口
             response_info = await self._polling(
                 case_id=case_id,
-                sleep=config['sleep'],
+                sleep=config['sleep'] + random.choice([0.1, 0.3, 0.5]),
                 check=check,
                 request_info=request_info,
                 files=temp_data[num].file_data,
@@ -277,19 +278,16 @@ class RunApi:
         asyncio.create_task(self._del_case_status(random_key))
         await self._add_response(api_info_list=api_info_list, case_id=case_id)
 
-        case_info = await crud.update_test_case_order(db=db, case_id=case_id, is_fail=is_fail)
+        case_info = await service_crud.get_case_info(db=db, case_id=case_id)
 
         await crud.queue_add(db=db, data={
             'start_time': int(time.time() * 1000),
-            'case_name': f'{temp_pro}-{temp_name}-{case_info.case_name}',
+            'case_name': f'{temp_pro}-{temp_name}-{case_info[0].case_name}',
             'case_data': result
         })
-        logger.info(f"用例: {temp_pro}-{temp_name}-{case_info.case_name} 执行完成, 进行结果校验, 序号: {case_info.run_order}")
+        logger.info(f"用例: {temp_pro}-{temp_name}-{case_info[0].case_name} 执行完成, 进行结果校验, 序号: {case_info[0].run_order}")
         await self.sees.close()
-        return f"{temp_pro}-{temp_name}-{case_info.case_name}", \
-               case_info.run_order, \
-               case_info.success, \
-               case_info.fail, \
+        return f"{temp_pro}-{temp_name}-{case_info[0].case_name}", \
                is_fail, \
                total_time
 

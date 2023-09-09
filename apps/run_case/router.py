@@ -28,6 +28,7 @@ from apps.whole_conf import crud as conf_crud
 from tools.read_setting import setting
 from tools.load_allure import load_allure_report
 from .tool import run_service_case, run_ddt_case, run_ui_case, header, allure_generate
+from .tool import report as header_report
 
 run_case = APIRouter()
 
@@ -48,16 +49,19 @@ async def run_case_name(ids: schemas.RunCase, db: Session = Depends(get_db)):
     if SETTING_LIST.get(ids.setting_list_id):
         del SETTING_LIST[ids.setting_list_id]
 
-    report = await run_service_case(
+    # 执行用例
+    report_list = await run_service_case(
         db=db,
         case_ids=ids.case_ids,
         setting_info_dict=SETTING_INFO_DICT.get(ids.setting_list_id, {})
     )
 
+    await header_report(db=db, report=report_list)
+
     if SETTING_INFO_DICT.get(ids.setting_list_id):
         del SETTING_INFO_DICT[ids.setting_list_id]
 
-    return await response_code.resp_200(data={'allure_report': report})
+    return await response_code.resp_200(data={'allure_report': report_list})
 
 
 @run_case.post(
@@ -80,13 +84,24 @@ async def run_case_name(temp_ids: List[int], db: Session = Depends(get_db)):
         return await response_code.resp_400()
 
     # 按模板并发
-    tasks = [asyncio.create_task(run_service_case(db=db, case_ids=[case_id])) for case_id in all_case_list]
-    result = await asyncio.gather(*tasks)
+    tasks = [
+        asyncio.create_task(
+            run_service_case(
+                db=db,
+                case_ids=[case_id],
+                setting_info_dict={}
+            )
+        ) for case_id in all_case_list
+    ]
+    case_info = await asyncio.gather(*tasks)
 
-    new_result = {}
-    for x in result:
-        new_result.update(x)
-    return await response_code.resp_200(data={'allure_report': new_result, "temp_info": temp_info})
+    new_report = []
+    for report_list in case_info:
+        new_report += report_list
+
+        await header_report(db=db, report=report_list)
+
+    return await response_code.resp_200(data={'allure_report': new_report, "temp_info": temp_info})
 
 
 @run_case.post(
@@ -121,28 +136,31 @@ async def run_case_gather(rcs: schemas.RunCaseGather, db: Session = Depends(get_
                 )
             ) for data in new_case_data
         ]
-        result = await asyncio.gather(*tasks)
+        case_info = await asyncio.gather(*tasks)
 
-        new_result = {}
-        for x in result:
-            new_result.update(x)
+        # 生成报告
+        new_report = []
+        for report_list in case_info:
+            new_report += report_list
+            await header_report(db=db, report=report_list)
 
         if SETTING_INFO_DICT.get(rcs.setting_list_id):
             del SETTING_INFO_DICT[rcs.setting_list_id]
 
-        return await response_code.resp_200(data={'allure_report': new_result})
+        return await response_code.resp_200(data={'allure_report': new_report})
     else:
-        report = await run_ddt_case(
+        report_list = await run_ddt_case(
             db=db,
             case_id=rcs.case_id,
             case_info=new_case_data,
             setting_info_dict=SETTING_INFO_DICT.get(rcs.setting_list_id, {})
         )
+        await header_report(db=db, report=report_list)
 
         if SETTING_INFO_DICT.get(rcs.setting_list_id):
             del SETTING_INFO_DICT[rcs.setting_list_id]
 
-        return await response_code.resp_200(data={'allure_report': report})
+        return await response_code.resp_200(data={'allure_report': report_list})
 
 
 @run_case.post(

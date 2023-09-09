@@ -23,8 +23,7 @@ from apps.case_service import crud as case_crud
 from apps.template import crud as temp_crud
 from apps.whole_conf import crud as conf_crud
 from apps.case_ui import crud as ui_crud
-from apps.run_case.tool import RunApi, run, allure_generate
-from tools.load_allure import load_allure_report
+from apps.run_case.tool import RunApi, run
 from tools.read_setting import setting
 from apps.run_case.tool.header_host import whole_host
 from apps.run_case.tool.run_ui import run_ui
@@ -41,7 +40,7 @@ async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict 
     :param setting_info_dict：
     :return:
     """
-    report = {}
+    report_list = []
     for case_id in case_ids:
         case_info = await case_crud.get_case_info(db=db, case_id=case_id)
         if case_info:
@@ -60,7 +59,7 @@ async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict 
             temp_info = await temp_crud.get_temp_name(db=db, temp_id=case_info[0].temp_id)
             # 处理数据，执行用例
             try:
-                case, run_order, success, fail, is_fail, total_time = await RunApi().fo_service(
+                case, is_fail, total_time = await RunApi().fo_service(
                     db=db,
                     case_id=case_id,
                     temp_data=temp_data,
@@ -81,46 +80,28 @@ async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict 
             except IndexError as e:
                 raise Exception(f': {str(e)}')
 
-            allure_dir = setting['allure_path']
             # 执行用例
             allure_plus_dir, allure_path = await run(
                 test_path='./apps/run_case/test_case/test_service.py',
-                allure_dir=allure_dir,
+                allure_dir=setting['allure_path'],
                 case_id=case_id,
             )
-            # 生成报告
-            await allure_generate(
-                allure_plus_dir=allure_plus_dir,
-                run_order=run_order,
-                allure_path=allure_path,
-                report_url=setting['host'],
-                case_name=case,
-                case_id=case_id,
-                ui=True
+
+            report_list.append(
+                {
+                    'allure_plus_dir': allure_plus_dir,
+                    'allure_path': allure_path,
+                    'case_name': case,
+                    'case_id': case_id,
+                    'allure_dir': setting['allure_path'],
+                    'is_fail': is_fail,
+                    'total_time': total_time,
+                }
             )
-
-            await load_allure_report(allure_dir=allure_dir, case_id=case_id, run_order=run_order)
-
-            # report[case_id] = f'{HOST}allure/{case_id}/{run_order}'
-            report[case_id] = {
-                'report': f'/allure/{case_id}/{run_order}',
-                'is_fail': is_fail,
-                'run_order': run_order,
-                'success': success,
-                'fail': fail,
-                'total_time': total_time
-            }
         else:
-            report[case_id] = {
-                'report': f'用例{case_id}不存在',
-                'is_fail': True,
-                'run_order': 0,
-                'success': 0,
-                'fail': 0,
-                'total_time': 0
-            }
+            report_list.append({})
 
-    return report
+    return report_list
 
 
 async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_dict: dict = None):
@@ -132,7 +113,7 @@ async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_
     :param setting_info_dict:
     :return:
     """
-    report = {}
+    report_list = []
     for case_data in case_info:
         case_info = await case_crud.get_case_info(db=db, case_id=case_id)
         # 拿到模板数据
@@ -148,11 +129,11 @@ async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_
         temp_info = await temp_crud.get_temp_name(db=db, temp_id=case_info[0].temp_id)
         # 处理数据，执行用例
         try:
-            case, run_order, success, fail, is_fail, total_time = await RunApi().fo_service(
+            case, is_fail, total_time = await RunApi().fo_service(
                 db=db,
                 case_id=case_id,
-                temp_data=temp_data,
-                case_data=case_data,
+                temp_data=copy.deepcopy(temp_data),
+                case_data=copy.deepcopy(case_data),
                 temp_pro=temp_info[0].project_name,
                 temp_name=temp_info[0].temp_name,
                 setting_info_dict=setting_info_dict
@@ -169,36 +150,26 @@ async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_
         except IndexError as e:
             raise Exception(f': {str(e)}')
 
-        allure_dir = setting['allure_path']
         # 执行用例
         allure_plus_dir, allure_path = await run(
             test_path='./apps/run_case/test_case/test_service.py',
-            allure_dir=allure_dir,
+            allure_dir=setting['allure_path'],
             case_id=case_id,
         )
-        # 生成报告
-        await allure_generate(
-            allure_plus_dir=allure_plus_dir,
-            run_order=run_order,
-            allure_path=allure_path,
-            report_url=setting['host'],
-            case_name=case,
-            case_id=case_id,
-            ui=True
+
+        report_list.append(
+            {
+                'allure_plus_dir': allure_plus_dir,
+                'allure_path': allure_path,
+                'case_name': case,
+                'case_id': case_id,
+                'allure_dir': setting['allure_path'],
+                'is_fail': is_fail,
+                'total_time': total_time,
+            }
         )
 
-        await load_allure_report(allure_dir=allure_dir, case_id=case_id, run_order=run_order)
-
-        report[case_id] = {
-            'report': f'/allure/{case_id}/{run_order}',
-            'is_fail': is_fail,
-            'run_order': run_order,
-            'success': success,
-            'fail': fail,
-            'total_time': total_time
-        }
-
-    return report
+    return report_list
 
 
 async def run_ui_case(

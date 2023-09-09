@@ -35,7 +35,15 @@ async def run(
     return allure_plus_dir, allure_path
 
 
-async def allure_generate(allure_plus_dir, run_order, allure_path, report_url, case_name, case_id, ui):
+async def allure_generate(
+        allure_plus_dir,
+        run_order,
+        allure_path,
+        report_url,
+        case_name,
+        case_id,
+        ui=False
+):
     """
     执行报告
     :param allure_plus_dir:
@@ -57,7 +65,10 @@ async def allure_generate(allure_plus_dir, run_order, allure_path, report_url, c
     await update_trend_data(allure_plus_dir, build_order, old_data, report_url, case_name, case_id, run_order, ui)
 
 
-def get_dirname(allure_plus_dir, run_order):
+def get_dirname(
+        allure_plus_dir,
+        run_order
+):
     hostory_file = os.path.join(allure_plus_dir, "history.json")
     if os.path.exists(hostory_file):
         with open(hostory_file) as f:

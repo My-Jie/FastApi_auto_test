@@ -47,15 +47,19 @@ async def queue_query(db: Session):
     return db.query(queue.RunCaseQueue).order_by(queue.RunCaseQueue.start_time).all()
 
 
-async def queue_del(db: Session, queue_id: int):
+async def queue_del(db: Session, queue_id: int = None):
     """
     删除输出
     :param db:
     :param queue_id:
     :return:
     """
-    db.query(queue.RunCaseQueue).filter(queue.RunCaseQueue.id == queue_id).delete()
-    db.commit()
+    if queue_id is not None:
+        db.query(queue.RunCaseQueue).filter(queue.RunCaseQueue.id == queue_id).delete()
+        db.commit()
+        return
+
+    db.query(queue.RunCaseQueue).delete()
 
 
 async def update_test_case_order(db: Session, case_id: int, is_fail: bool):
