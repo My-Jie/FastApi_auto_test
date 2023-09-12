@@ -44,7 +44,7 @@ template = APIRouter()
 )
 async def upload_file_har(
         temp_name: str,
-        project_name: str,
+        project_name: int,
         har_type: schemas.HarType,
         file: UploadFile,
         db: Session = Depends(get_db)
@@ -60,8 +60,8 @@ async def upload_file_har(
     if await crud.get_temp_name(db=db, temp_name=temp_name):
         return await response_code.resp_400(message=f'模板名称已存在')
 
-    conf = await conf_crud.get_project(db=db)
-    if project_name not in [x.code for x in conf]:
+    conf = await conf_crud.get_project(db=db, id_=project_name)
+    if not conf:
         return await response_code.resp_400(message='项目编码不匹配或未创建项目')
 
     # 解析数据，拿到解析结果
@@ -103,7 +103,7 @@ async def analysis_file_har(file: UploadFile):
     response_model=schemas.TemplateOut,
 )
 async def upload_swagger_json(
-        project_name: str,
+        project_name: int,
         host: HttpUrl,
         file: UploadFile,
         db: Session = Depends(get_db)
@@ -120,8 +120,8 @@ async def upload_swagger_json(
     except json.decoder.JSONDecodeError as e:
         return await response_code.resp_400(message=f'json文件格式有错误: {str(e)}')
 
-    conf = await conf_crud.get_project(db=db)
-    if project_name not in [x.code for x in conf]:
+    conf = await conf_crud.get_project(db=db, id_=project_name)
+    if not conf:
         return await response_code.resp_400(message='项目编码不匹配或未创建项目')
 
     # 解析数据，拿到解析结果
@@ -404,10 +404,11 @@ async def get_templates(
 
     out_info = []
     for temp in templates:
+        project_code = await conf_crud.get_project_code(db=db, id_=temp.project_name)
         case_info = await crud.get_temp_case_info(db=db, temp_id=temp.id, outline=outline)
         temp_info = {
             'temp_name': temp.temp_name,
-            'project_name': temp.project_name,
+            'project_name': project_code,
             'id': temp.id,
             'api_count': temp.api_count,
             'created_at': temp.created_at,
@@ -481,7 +482,7 @@ async def get_temp_host_list(temp_id: int, db: Session = Depends(get_db)):
 )
 async def create_new_temp(
         temp_name: str,
-        project_name: str,
+        project_name: int,
         number_list: List[str],
         db: Session = Depends(get_db)
 ):
@@ -492,8 +493,8 @@ async def create_new_temp(
     if temp_name_:
         return await response_code.resp_400(message='模板名称重复')
 
-    conf = await conf_crud.get_project(db=db)
-    if project_name not in [x.code for x in conf]:
+    conf = await conf_crud.get_project(db=db, id_=project_name)
+    if not conf:
         return await response_code.resp_400(message='项目编码不匹配或未创建项目')
 
     # 查找数据

@@ -73,6 +73,12 @@ async def get_project(db: Session, id_: int = None, name: str = None):
     return db.query(models.ConfProject).all()
 
 
+async def get_project_code(db: Session, id_: int = None):
+    db_info = db.query(models.ConfProject.code).filter(models.ConfProject.id == id_).first()
+    if db_info:
+        return db_info[0]
+
+
 async def update_project(db: Session, id_: int, conf_project: schemas.ConfProjectIn):
     db.query(models.ConfProject).filter(
         models.ConfProject.id == id_

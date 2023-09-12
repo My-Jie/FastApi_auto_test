@@ -20,6 +20,7 @@ from apps import response_code
 from tools.excel import CreateExcelToUi
 from apps.case_ui import schemas, crud
 from apps.case_ui.tool import case_data
+from apps.whole_conf import crud as conf_crud
 from tools import ReadUiExcel
 from tools.read_setting import setting
 
@@ -39,10 +40,11 @@ async def put_playwright(pd: schemas.PlaywrightIn, db: Session = Depends(get_db)
         if not temp_id:
             return await response_code.resp_404()
 
+        project_code = await conf_crud.get_project_code(db=db, id_=pd.project_name)
         await crud.update_playwright(
             db=db,
             temp_id=pd.id,
-            project_name=pd.project_name,
+            project_name=project_code,
             temp_name=pd.temp_name,
             rows=pd.text.count('\n'),
             text=pd.text,
@@ -88,8 +90,25 @@ async def get_playwright_list(
     获取playwright列表
     """
     temp_info = await crud.get_playwright(db=db, temp_name=temp_name, like=True, page=page, size=size)
+    temp_list = []
+    for temp in temp_info:
+        temp_list.append(
+            {
+                'id': temp.id,
+                'project_name': await conf_crud.get_project_code(db=db, id_=temp.project_name),
+                'temp_name': temp.temp_name,
+                'rows': temp.rows,
+                'run_order': temp.run_order,
+                'success': temp.success,
+                'fail': temp.fail,
+                'text': temp.text,
+                'created_at': temp.created_at,
+                'updated_at': temp.updated_at,
+            }
+        )
+
     return {
-        'items': list(temp_info),
+        'items': temp_list,
         'total': await crud.get_count(db=db, temp_name=temp_name),
         'page': page,
         'size': size
@@ -254,10 +273,11 @@ async def copy_case(temp_id: int, db: Session = Depends(get_db)):
     if not temp_info:
         return await response_code.resp_400(message='没有获取到这个用例id')
 
+    project_code = await conf_crud.get_project_code(db=db, id_=temp_info[0].project_name)
     await crud.create_playwright(
         db=db,
         data=schemas.PlaywrightIn(**{
-            'project_name': temp_info[0].project_name,
+            'project_name': project_code,
             'temp_name': temp_info[0].temp_name + ' - 副本',
             'text': temp_info[0].text,
         }),

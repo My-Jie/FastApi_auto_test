@@ -17,7 +17,7 @@ class Template(Base):
     """
     __tablename__ = 'case_template'
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    project_name = Column(String, nullable=True, index=True, comment='项目名称')
+    project_name = Column(Integer, nullable=True, index=True, comment='项目名称ID')
     temp_name = Column(String, unique=True, nullable=True, index=True, comment='场景名称')
     api_count = Column(Integer, default=0, nullable=True, comment='接口数量')
 

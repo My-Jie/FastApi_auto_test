@@ -130,9 +130,10 @@ async def get_case_api(setting_id: int, page: int = 1, size: int = 1000, db: Ses
     case_info = []
     for case in test_case:
         temp_info = await temp_crud.get_temp_name(db=db, temp_id=case.temp_id)
+        project_code = await conf_crud.get_project_code(db=db, id_=temp_info[0].project_name)
         case_info.append(
             {
-                "project_name": temp_info[0].project_name,
+                "project_name": project_code,
                 "temp_name": temp_info[0].temp_name,
                 "case_name": case.case_name,
                 "case_id": case.id,
@@ -157,9 +158,10 @@ async def get_case_ui(setting_id: int, page: int = 1, size: int = 1000, db: Sess
 
     case_info = []
     for case in test_case:
+        project_code = await conf_crud.get_project_code(db=db, id_=case.project_name)
         case_info.append(
             {
-                "project_name": case.project_name,
+                "project_name": project_code,
                 "case_name": case.temp_name,
                 "case_id": case.id,
                 "bind": True if case.id in ui_case_ids else False

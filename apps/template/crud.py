@@ -13,7 +13,7 @@ from apps.template import models, schemas
 from apps.case_service import models as case_models
 
 
-async def create_template(db: Session, temp_name: str, project_name: str):
+async def create_template(db: Session, temp_name: str, project_name: int):
     """
     创建模板信息
     :param db:

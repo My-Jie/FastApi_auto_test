@@ -9,12 +9,12 @@
 
 from datetime import datetime
 from pydantic import BaseModel
-from typing import Optional, List, Union
+from typing import List, Union, Optional
 
 
 class PlaywrightIn(BaseModel):
     id: Optional[int]
-    project_name: str
+    project_name: int
     temp_name: str
     text: str
 
@@ -23,7 +23,7 @@ class PlaywrightIn(BaseModel):
 
 
 class PlaywrightOut(PlaywrightIn):
-    id: int
+    project_name: str
     rows: int
     run_order: int
     success: int

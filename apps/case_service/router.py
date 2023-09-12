@@ -23,6 +23,7 @@ from tools import OperationJson, ExtractParamsPath, RepData, filter_number
 from tools.read_setting import setting
 from .tool import GetCaseDataInfo, check, js_count
 
+from apps.whole_conf import crud as conf_crud
 from apps.template import crud as temp_crud
 from apps.case_service import crud, schemas
 from apps.case_ddt import crud as ddt_crud
@@ -278,11 +279,12 @@ async def case_data_list(
     case_info = []
     for case in test_case:
         temp_info = await temp_crud.get_temp_name(db=db, temp_id=case.temp_id)
+        project_code = await conf_crud.get_project_code(db=db, id_=temp_info[0].project_name)
         case_info.append(
             {
-                "name": f"{temp_info[0].project_name}-{temp_info[0].temp_name}-{case.case_name}",
+                "name": f"{project_code}-{temp_info[0].temp_name}-{case.case_name}",
                 "case_name": f"{case.case_name}",
-                "temp_name": f"{temp_info[0].project_name}-{temp_info[0].temp_name}",
+                "temp_name": f"{project_code}-{temp_info[0].temp_name}",
                 "case_id": case.id,
                 "api_count": case.case_count,
                 "run_order": case.run_order,
@@ -291,9 +293,9 @@ async def case_data_list(
                 "mode": case.mode,
                 "created_at": case.created_at
             } if outline is False else {
-                "name": f"{temp_info[0].project_name}-{temp_info[0].temp_name}-{case.case_name}",
+                "name": f"{project_code}-{temp_info[0].temp_name}-{case.case_name}",
                 "case_name": f"{case.case_name}",
-                "temp_name": f"{temp_info[0].project_name}-{temp_info[0].temp_name}",
+                "temp_name": f"{project_code}-{temp_info[0].temp_name}",
                 "case_id": case.id
             }
         )

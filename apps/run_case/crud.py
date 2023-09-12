@@ -8,20 +8,8 @@
 """
 
 from sqlalchemy.orm import Session
-from apps.template import models
 from apps.run_case import models as queue
 from apps.case_service import models as service_case
-
-
-async def get_pro_name(db: Session, temp_id: int):
-    """
-    查询模板名称
-    :param db:
-    :param temp_id:
-    :return:
-    """
-    temp_info = db.query(models.Template).filter(models.Template.id == temp_id).first()
-    return temp_info.project_name
 
 
 async def queue_add(db: Session, data: dict):

@@ -17,7 +17,7 @@ class PlaywrightTemp(Base):
     """
     __tablename__ = 'playwright_temp'
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    project_name = Column(String, nullable=True, index=True, comment='系统名称')
+    project_name = Column(Integer, nullable=True, index=True, comment='系统名称')
     temp_name = Column(String, nullable=True, index=True, comment='模板名称')
     rows = Column(Integer, default=0, nullable=True, comment='行数')
     run_order = Column(Integer, default=0, nullable=True, comment='执行次数')

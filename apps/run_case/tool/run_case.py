@@ -57,6 +57,7 @@ async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict 
 
             # 拿到项目名称、模板名称
             temp_info = await temp_crud.get_temp_name(db=db, temp_id=case_info[0].temp_id)
+            project_code = await conf_crud.get_project_code(db=db, id_=temp_info[0].project_name)
             # 处理数据，执行用例
             try:
                 case, is_fail, total_time = await RunApi().fo_service(
@@ -64,7 +65,7 @@ async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict 
                     case_id=case_id,
                     temp_data=temp_data,
                     case_data=case_data,
-                    temp_pro=temp_info[0].project_name,
+                    temp_pro=project_code,
                     temp_name=temp_info[0].temp_name,
                     setting_info_dict=setting_info_dict
                 )
@@ -127,6 +128,7 @@ async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_
 
         # 拿到项目名称、模板名称
         temp_info = await temp_crud.get_temp_name(db=db, temp_id=case_info[0].temp_id)
+        project_code = await conf_crud.get_project_code(db=db, id_=temp_info[0].project_name)
         # 处理数据，执行用例
         try:
             case, is_fail, total_time = await RunApi().fo_service(
@@ -134,7 +136,7 @@ async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_
                 case_id=case_id,
                 temp_data=copy.deepcopy(temp_data),
                 case_data=copy.deepcopy(case_data),
-                temp_pro=temp_info[0].project_name,
+                temp_pro=project_code,
                 temp_name=temp_info[0].temp_name,
                 setting_info_dict=setting_info_dict
             )
