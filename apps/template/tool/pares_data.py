@@ -11,6 +11,7 @@ import base64
 import json
 from apps.template import schemas
 from tools.global_log import logger
+from urllib.parse import unquote
 
 FILTER_MIME_TYPE = [
     'application/javascript',
@@ -57,7 +58,7 @@ class ParseData:
 
             # 处理请求中的params数据
             if data['request'].get('queryString'):
-                query = {query['name']: query['value'] for query in data['request']['queryString']}
+                query = {query['name']: unquote(query['value']) for query in data['request']['queryString']}
             else:
                 query = {}
 

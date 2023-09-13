@@ -360,7 +360,7 @@ class RunApi:
                         name=file['name'],
                         value=base64.b64decode(file['value'].encode('utf-8')),
                         content_type=file['contentType'],
-                        filename=file['fileName']
+                        filename=file['fileName'].encode().decode('unicode_escape')
                     )
                 request_info['data'] = files_data
 

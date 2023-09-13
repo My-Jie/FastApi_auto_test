@@ -19,7 +19,7 @@ def rep_value(json_data: dict, old_str: str, new_str: str) -> dict:
 
     def handle_value(data):
         target = {}
-        if isinstance(data, str):
+        if isinstance(data, (str, int, float)):
             if old_str == data:
                 return old_str.replace(old_str, new_str)
             else:
