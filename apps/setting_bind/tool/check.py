@@ -7,8 +7,6 @@
 @Time: 2023/7/27-23:32
 """
 
-from apps import response_code
-
 
 async def check_setting(bind: bool, id_: int, ids: list):
     """
@@ -18,6 +16,9 @@ async def check_setting(bind: bool, id_: int, ids: list):
     :param ids:
     :return:
     """
+    if id_ is None:
+        return
+
     if bind:
         if id_ in ids:
             raise ValueError('存在重复的绑定id')
