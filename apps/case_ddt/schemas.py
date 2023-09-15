@@ -9,7 +9,12 @@
 
 from datetime import datetime
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
+
+
+class DelGrater(BaseModel):
+    case_id: int
+    suite: List[int]
 
 
 class TestGrater(BaseModel):

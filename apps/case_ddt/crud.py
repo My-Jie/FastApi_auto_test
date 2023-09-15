@@ -27,13 +27,22 @@ async def create_test_gather(db: Session, data: schemas.TestGrater):
     return db_data
 
 
-async def del_test_gather(db: Session, case_id: int):
+async def del_test_gather(db: Session, case_id: int, suite: list = None):
     """
     删除测试数据集
     :param db:
     :param case_id:
+    :param suite:
     :return:
     """
+    if suite:
+        db.query(models.TestGather).filter(
+            models.TestGather.case_id == case_id,
+            models.TestGather.suite.in_(suite)
+        ).delete()
+        db.commit()
+        return
+
     db.query(models.TestGather).filter(models.TestGather.case_id == case_id).delete()
     db.commit()
 

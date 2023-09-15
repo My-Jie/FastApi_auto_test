@@ -104,3 +104,12 @@ async def get_data_gather(case_id: int, db: Session = Depends(get_db)):
     获取数据集数据
     """
     return await crud.get_gather(db=db, case_id=case_id)
+
+
+@case_ddt.delete(
+    '/del/gather',
+    name='删除数据集'
+)
+async def del_gather(dg: schemas.DelGrater, db: Session = Depends(get_db)):
+    await crud.del_test_gather(db=db, case_id=dg.case_id, suite=dg.suite)
+    return await response_code.resp_200()

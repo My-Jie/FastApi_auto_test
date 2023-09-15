@@ -285,3 +285,12 @@ async def copy_case(temp_id: int, db: Session = Depends(get_db)):
     )
 
     return await response_code.resp_200()
+
+
+@case_ui.delete(
+    '/del/gather',
+    name='删除数据集'
+)
+async def del_gather(dg: schemas.DelGrater, db: Session = Depends(get_db)):
+    await crud.del_play_case_data(db=db, temp_id=dg.temp_id, case_ids=dg.gather_ids)
+    return await response_code.resp_200()

@@ -10,6 +10,7 @@
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from apps.case_ui import models, schemas
+from typing import List
 
 
 async def create_playwright(db: Session, data: schemas.PlaywrightIn, rows: int):
@@ -138,14 +139,22 @@ async def get_play_case_data(db: Session, case_id: int = None, temp_id: int = No
     return db.query(models.PlaywrightCaseDate).all()
 
 
-async def del_play_case_data(db: Session, case_id: int = None, temp_id: int = None):
+async def del_play_case_data(db: Session, case_id: int = None, temp_id: int = None, case_ids: List[int] = None):
     """
-    删除测试呼叫
+    删除测试数据集
     :param db:
     :param case_id:
     :param temp_id:
     :return:
     """
+    if case_ids:
+        db.query(models.PlaywrightCaseDate).filter(
+            models.PlaywrightCaseDate.temp_id == temp_id,
+            models.PlaywrightCaseDate.id.in_(case_ids)
+        ).delete()
+        db.commit()
+        return
+
     if case_id:
         db.query(models.PlaywrightCaseDate).filter(
             models.PlaywrightCaseDate.id == case_id,

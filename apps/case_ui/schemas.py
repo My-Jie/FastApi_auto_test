@@ -12,6 +12,11 @@ from pydantic import BaseModel
 from typing import List, Union, Optional
 
 
+class DelGrater(BaseModel):
+    temp_id: int
+    gather_ids: List[int]
+
+
 class PlaywrightIn(BaseModel):
     id: Optional[int]
     project_name: int

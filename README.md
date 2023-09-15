@@ -137,15 +137,6 @@
 * 系统列表：api用例、ui用例标识
 
 
-## 一些文档地址
-
-* 博客：https://blog.csdn.net/yangj507/category_12359965.html
-* 前端：https://gitee.com/myjiee/auto_test_web
-* 前端：https://github.com/My-Jie/auto_test_web
-* 主页：http://localhost:8000/index.html
-* swagger-ui: http://localhost:8000/docs
-
-
 ## 一些截图
 ![image](img/1689178463172.jpg)
 ![image](img/1689178210973.jpg)
@@ -180,6 +171,14 @@
 * 在 python 后端根目录下新建 static 文件夹
 * 将 dist 文件夹内的3个文件，拷贝到 static 目录下
 * 主页：http://ip:port/index.html
+
+## 一些文档地址
+
+* 博客：https://blog.csdn.net/yangj507/category_12359965.html
+* 前端：https://gitee.com/myjiee/auto_test_web
+* 前端：https://github.com/My-Jie/auto_test_web
+* 主页：http://localhost:8000/index.html
+* swagger-ui: http://localhost:8000/docs
 
 # QQ交流群: 599733338
 
