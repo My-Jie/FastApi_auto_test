@@ -8,6 +8,7 @@
 """
 
 import re
+import jsonpath
 
 
 def json_count(dict_data: dict):
@@ -70,7 +71,7 @@ def str_count(str_data: str):
     return target
 
 
-def count(case_list: list):
+def count(case_id: int, case_list: list, temp_list: list, run_case: dict):
     data_count = {}
     for i, case in enumerate(case_list):
         for k, v in str_count(case.path).items():
@@ -220,9 +221,40 @@ def count(case_list: list):
     # 转行为前端能处理的格式
     data_list = []
     for k, v in data_count.items():
+        new_key = re.sub('{{', '', re.sub('}}', '', k))
+        if 'h$' in k:
+            new_key = new_key.replace('h$', '$')
+            number, json_path = new_key.split('.', 1)
+            temp_value = jsonpath.jsonpath(temp_list[int(number)].headers, json_path)
+            temp_value = temp_value[0] if temp_value else '-'
+
+            try:
+                case_value = jsonpath.jsonpath(run_case.get(
+                    case_id, []
+                )[int(number)].get('headers', {}), json_path)
+            except IndexError:
+                case_value = '-'
+            else:
+                case_value = case_value[0] if case_value else '-'
+        else:
+            number, json_path = new_key.split('.', 1)
+            temp_value = jsonpath.jsonpath(temp_list[int(number)].response, json_path)
+            temp_value = temp_value[0] if temp_value else '-'
+
+            try:
+                case_value = jsonpath.jsonpath(run_case.get(
+                    case_id, []
+                )[int(number)].get('response', {}), json_path)
+            except IndexError:
+                case_value = '-'
+            else:
+                case_value = case_value[0] if case_value else '-'
+
         data_list.append(
             {
                 'jsonpath': k,
+                'temp_value': temp_value,
+                'case_value': case_value,
                 'path': v['path'].get('numbers', []),
                 'params': v['params'].get('numbers', []),
                 'data': v['data'].get('numbers', []),

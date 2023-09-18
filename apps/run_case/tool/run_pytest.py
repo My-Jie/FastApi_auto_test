@@ -69,9 +69,9 @@ def get_dirname(
         allure_plus_dir,
         run_order
 ):
-    hostory_file = os.path.join(allure_plus_dir, "history.json")
-    if os.path.exists(hostory_file):
-        with open(hostory_file) as f:
+    history_file = os.path.join(allure_plus_dir, "history.json")
+    if os.path.exists(history_file):
+        with open(history_file) as f:
             li = eval(f.read())
         # 根据构建次数进行排序，从大到小
         li.sort(key=lambda x: x['buildOrder'], reverse=True)
@@ -79,7 +79,7 @@ def get_dirname(
         return li[0]["buildOrder"] + 1, li
     else:
         # 首次进行生成报告，肯定会进到这一步，先创建history.json,然后返回构建次数1（代表首次）
-        with open(hostory_file, "w") as f:
+        with open(history_file, "w") as f:
             f.write(json.dumps({}))
         return run_order, None
 
@@ -123,7 +123,7 @@ async def update_trend_data(
         with open(os.path.join(allure_plus_dir, f"{str(i)}/widgets/history-trend.json"), "w+") as f:
             f.write(json.dumps(old_data))
     # 把数据备份到history.json
-    hostory_file = os.path.join(allure_plus_dir, "history.json")
-    with open(hostory_file, "w+") as f:
+    history_file = os.path.join(allure_plus_dir, "history.json")
+    with open(history_file, "w+") as f:
         f.write(json.dumps(old_data))
     return old_data, new_data[0]["reportUrl"]

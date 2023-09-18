@@ -29,6 +29,7 @@ from apps.case_service import crud, schemas
 from apps.case_ddt import crud as ddt_crud
 from apps.case_service.tool import insert, cover_insert
 from apps.template.tool import GenerateCase
+from apps.run_case import CASE_RESPONSE
 
 case_service = APIRouter()
 
@@ -814,7 +815,8 @@ async def get_jsonpath(case_id: int, db: Session = Depends(get_db)):
         return case_info
 
     case_list = await crud.get_case_data(db=db, case_id=case_info[0].id)
+    temp_list = await temp_crud.get_template_data(db=db, temp_id=case_info[0].temp_id)
 
-    data_count = js_count(case_list=case_list)
+    data_count = js_count(case_id=case_id, case_list=case_list, temp_list=temp_list, run_case=CASE_RESPONSE)
 
     return data_count
