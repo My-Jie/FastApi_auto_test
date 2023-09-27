@@ -14,7 +14,6 @@ from tools import logger
 
 BROWSER_TEMP: str = f"""
     browser = playwright.chromium.connect_over_cdp(
-        args=["--start-maximized"]),
         endpoint_url='ws://{setting['selenoid']['selenoid_ui_host']}/ws/devtools/driver.session_id'
     )
 """
@@ -80,7 +79,7 @@ async def replace_playwright(
         browser_temp = BROWSER_TEMP.replace('driver.session_id', str(session_id))
         logger.info(f'browser_temp: {browser_temp}')
         new_text = new_text.replace(
-            'browser = playwright.chromium.launch(headless=False), args=["--start-maximized"])',
+            'browser = playwright.chromium.launch(headless=False, args=["--start-maximized"])',
             browser_temp
         )
 
