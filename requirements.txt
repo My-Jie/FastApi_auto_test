@@ -11,8 +11,8 @@ Faker~=14.2.0
 ujson~=5.4.0
 pyyaml~=5.4.1
 python-multipart~=0.0.6
-
-ddddocr~=1.4.7
+w3lib
+# ddddocr~=1.4.7
 aiomysql~=0.0.21
 fastapi-pagination~=0.12.1
 SQLAlchemy~=1.4.0

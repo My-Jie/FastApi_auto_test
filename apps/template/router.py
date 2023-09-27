@@ -54,7 +54,7 @@ async def upload_file_har(
     2、自动过滤掉'js','css','image'\n
     3、记录原始数据，拆解params、body、json数据
     """
-    if file.content_type != 'application/har+json':
+    if file.content_type not in ['application/har+json', 'application/octet-stream']:
         return await response_code.resp_400(message=f'文件类型错误，只支持har格式文件')
 
     if await crud.get_temp_name(db=db, temp_name=temp_name):
@@ -91,7 +91,7 @@ async def analysis_file_har(file: UploadFile):
     仅解析Charles数据，不返回['headers', 'file_data', 'response']\n
     用于同一接口多次使用时，查看请求数据的不同处
     """
-    if file.content_type != 'application/har+json':
+    if file.content_type not in ['application/har+json', 'application/octet-stream']:
         return await response_code.resp_400(message=f'文件类型错误，只支持har格式文件')
 
     return await ParseData.pares_data(har_data=file.file.read(), har_type=schemas.HarType.charles)
@@ -179,7 +179,7 @@ async def insert_har(
     """
     按num序号，按顺序插入原始数据到模板中
     """
-    if file.content_type != 'application/har+json':
+    if file.content_type not in ['application/har+json', 'application/octet-stream']:
         return await response_code.resp_400(message=f'文件类型错误，只支持har格式文件')
 
     har_data = await ParseData.pares_data(har_data=file.file.read(), har_type=schemas.HarType.charles)
