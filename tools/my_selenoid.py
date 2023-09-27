@@ -34,5 +34,6 @@ async def get_session_id(browser_name: str, browser_version: str, file_name: str
         command_executor=f"http://{setting['selenoid']['selenoid_hub_host']}/wd/hub",
         options=chrome_options
     )
+    driver.maximize_window()
 
     return driver.session_id

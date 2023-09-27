@@ -14,6 +14,7 @@ from tools import logger
 
 BROWSER_TEMP: str = f"""
     browser = playwright.chromium.connect_over_cdp(
+        timeout=60000,
         endpoint_url='ws://{setting['selenoid']['selenoid_ui_host']}/ws/devtools/driver.session_id'
     )
 """
