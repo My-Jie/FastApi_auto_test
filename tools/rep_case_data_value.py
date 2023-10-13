@@ -19,9 +19,15 @@ def rep_value(json_data: dict, old_str: str, new_str: str) -> dict:
 
     def handle_value(data):
         target = {}
-        if isinstance(data, (str, int, float)):
+        if isinstance(data, (int, float)):
             if old_str == data:
                 return old_str.replace(old_str, new_str)
+            else:
+                return data
+
+        if isinstance(data, str):
+            if old_str in data:
+                return data.replace(old_str, new_str)
             else:
                 return data
 
@@ -31,8 +37,8 @@ def rep_value(json_data: dict, old_str: str, new_str: str) -> dict:
         for k, v in data.items():
 
             if not isinstance(v, (list, dict)):
-                if v == old_str:
-                    target[k] = new_str
+                if old_str in str(v):
+                    target[k] = str(v).replace(old_str, new_str)
                 else:
                     target[k] = v
                 continue
