@@ -77,7 +77,10 @@ class ParseData:
                 else:
                     res_data = {}
             elif 'text/json' in str(data['response']['content'].get('mimeType')):
-                res_data = json.loads(data['response']['content']['text'])
+                try:
+                    res_data = json.loads(data['response']['content']['text'])
+                except json.decoder.JSONDecodeError:
+                    res_data = {}
             else:
                 res_data = {}
 
