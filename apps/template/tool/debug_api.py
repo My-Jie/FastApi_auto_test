@@ -184,7 +184,7 @@ async def get_jsonpath(
             d.path = v['path']
             d.params = v['params']
             d.data = v['data']
-            d.headers = v['request-headers']
+            d.headers = v['request_headers']
             d.response = v['response']
             temp_data.append(d)
 

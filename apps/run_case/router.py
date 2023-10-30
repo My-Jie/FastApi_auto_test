@@ -56,12 +56,12 @@ async def run_case_name(ids: schemas.RunCase, db: Session = Depends(get_db)):
         setting_info_dict=SETTING_INFO_DICT.get(ids.setting_list_id, {})
     )
 
-    await header_report(db=db, report=report_list)
+    # await header_report(db=db, report=report_list)
 
     if SETTING_INFO_DICT.get(ids.setting_list_id):
         del SETTING_INFO_DICT[ids.setting_list_id]
 
-    return await response_code.resp_200(data={'allure_report': report_list})
+    return await response_code.resp_200(data={'report': report_list})
 
 
 @run_case.post(
@@ -101,7 +101,7 @@ async def run_case_name(temp_ids: List[int], db: Session = Depends(get_db)):
 
         await header_report(db=db, report=report_list)
 
-    return await response_code.resp_200(data={'allure_report': new_report, "temp_info": temp_info})
+    return await response_code.resp_200(data={'report': new_report, "temp_info": temp_info})
 
 
 @run_case.post(
@@ -147,7 +147,7 @@ async def run_case_gather(rcs: schemas.RunCaseGather, db: Session = Depends(get_
         if SETTING_INFO_DICT.get(rcs.setting_list_id):
             del SETTING_INFO_DICT[rcs.setting_list_id]
 
-        return await response_code.resp_200(data={'allure_report': new_report})
+        return await response_code.resp_200(data={'report': new_report})
     else:
         report_list = await run_ddt_case(
             db=db,
@@ -160,7 +160,7 @@ async def run_case_gather(rcs: schemas.RunCaseGather, db: Session = Depends(get_
         if SETTING_INFO_DICT.get(rcs.setting_list_id):
             del SETTING_INFO_DICT[rcs.setting_list_id]
 
-        return await response_code.resp_200(data={'allure_report': report_list})
+        return await response_code.resp_200(data={'report': report_list})
 
 
 @run_case.post(

@@ -29,6 +29,7 @@ from apps.whole_conf.models import ConfHost, ConfProject, ConfDB, ConfUnifyRes, 
 from apps.setting_bind.models import SettingSet
 from apps.api_pool.models import YAoiProject, YApiPool
 from apps.run_case.models import RunCaseQueue
+from apps.api_report.models import ApiReportList, ApiReportDetail
 
 target_metadata = Base.metadata
 

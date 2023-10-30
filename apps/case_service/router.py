@@ -817,6 +817,12 @@ async def get_jsonpath(case_id: int, db: Session = Depends(get_db)):
     case_list = await crud.get_case_data(db=db, case_id=case_info[0].id)
     temp_list = await temp_crud.get_template_data(db=db, temp_id=case_info[0].temp_id)
 
-    data_count = js_count(case_id=case_id, case_list=case_list, temp_list=temp_list, run_case=CASE_RESPONSE)
+    data_count = js_count(
+        case_id=case_id,
+        case_list=case_list,
+        temp_list=temp_list,
+        run_case=CASE_RESPONSE,
+        get_temp_value=True
+    )
 
     return data_count

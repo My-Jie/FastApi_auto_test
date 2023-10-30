@@ -4,8 +4,8 @@ logger_level: 'INFO'
 log_path: 'D:/logs/'
 
 # allure总目录，未设置会在项目根目录下创建allure_path和allure_path_ui
-allure_path: 'D:/Works/auto_test/auto_report'
-allure_path_ui: 'D:/Works/auto_test/ui/auto_report'
+allure_path: 'D:/Works/liweijia/auto_test/auto_report'
+allure_path_ui: 'D:/Works/liweijia/auto_test/ui/auto_report'
 
 # host
 # 主要影响生成的allure测试报告的地址，历史数据趋势图的跳转地址，尽量使用统一不变的

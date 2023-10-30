@@ -27,10 +27,12 @@ from tools.read_setting import setting
 from apps.template import schemas as temp
 from apps.case_service import schemas as service
 from apps.case_service import crud as service_crud
-from apps.run_case import crud
+from apps.case_service.tool import js_count
 from apps.run_case import CASE_STATUS, CASE_RESPONSE, CASE_RESULT
+from apps.api_report.tool import write_api_report
 from .check_data import check_customize
 from tools import replace_data
+from .assert_case import AssertCase
 
 
 class RunApi:
@@ -41,6 +43,8 @@ class RunApi:
         self.code = None  # 存验证码数据
         self.extract = None  # 存提取的内容
         self.fk = FakerData()
+
+        # 用例执行的实时状态
         self.case_status = {
             'case_id': 0,
             'total': 0,
@@ -52,6 +56,22 @@ class RunApi:
             'expect': {},
             'request_info': {},
             'response_info': {},
+        }
+
+        # 测试报告列表数据
+        self.api_report = {
+            "case_id": 0,
+            "is_fail": False,
+            "run_number": 0,
+            "run_api": 0,
+            "total_api": 0,
+            "initiative_stop": False,
+            "fail_stop": False,
+            "success": 0,
+            "fail": 0,
+            "total_time": 0,
+            "max_time": 0,
+            "avg_time": 0,
         }
 
     async def fo_service(
@@ -84,15 +104,32 @@ class RunApi:
         temp_data = copy.deepcopy(temp_data)
         case_data = copy.deepcopy(case_data)
 
-        # 返回结果收集
-        api_info_list = []
+        # *提取数据的收集*
         response = []
         response_headers = []
-        result = []
-        is_fail = False
-        total_time = 0
-
+        # 接口详情
+        api_detail_list = []
+        # 总体的接口结果
+        all_is_fail = False
+        # 测试响应结果
+        CASE_RESPONSE[case_id] = []
         for num in range(len(temp_data)):
+            # 测试报告详情数据
+            api_detail = {
+                'status': '',
+                'method': '',
+                'host': '',
+                'path': '',
+                'run_time': '',
+                'request_info': {},
+                'response_info': {},
+                'expect_info': {},
+                'actual_info': {},
+                'jsonpath_info': {},
+                'conf_info': {},
+                'other_info': {}
+            }
+
             config: dict = copy.deepcopy(dict(case_data[num].config))
             logger.debug(f"{'=' * 30}case_id:{case_id},开始请求,number:{num}{'=' * 30}")
             try:
@@ -174,21 +211,28 @@ class RunApi:
             await self._check_count(check=check)
 
             # 轮询执行接口
-            response_info = await self._polling(
+            res, is_fail, response_time, result = await self._polling(
                 case_id=case_id,
-                sleep=config['sleep'] + random.choice([0.1, 0.3, 0.5]),
+                sleep=config['sleep'],
                 check=check,
                 request_info=request_info,
                 files=temp_data[num].file_data,
                 random_key=random_key,
                 db_config=db_config
             )
-            res, is_fail, response_time = response_info
+            request_info['__data'] = data
+
+            if is_fail:
+                all_is_fail = is_fail
 
             if not is_fail:
-                CASE_STATUS[random_key]['success'] += 1
+                self.api_report['success'] += 1
+                CASE_STATUS[random_key]['success'] = self.api_report['success']
             else:
-                CASE_STATUS[random_key]['fail'] += 1
+                self.api_report['fail'] += 1
+                CASE_STATUS[random_key]['fail'] = self.api_report['fail']
+
+            self.api_report['run_api'] += 1
 
             if config['is_login']:
                 self.cookies[temp_data[num].host] = await get_cookie(rep_type='aiohttp', response=res)
@@ -209,42 +253,27 @@ class RunApi:
 
             # logger.info(f"case_id:{case_id},状态码: {res.status}")
 
-            # 收集结果
-            total_time += response_time
-            request_info['total_api'] = self.case_status['total']
-            request_info['time'] = response_time
-            request_info['timestamp'] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
-            request_info['is_fail'] = is_fail
-            request_info['total_time'] = total_time
-            request_info['file'] = True if temp_data[num].file else False
-            request_info['expect'] = check
-            request_info['description'] = case_data[num].description if case_data[num].description else ''
-            request_info['config'] = case_data[num].config
+            self.api_report['total_time'] += response_time
+
+            if response_time > self.api_report['max_time']:
+                self.api_report['max_time'] = response_time
+
             try:
                 res_json = await res.json(content_type='application/json' if not temp_data[num].file else None)
                 res_json = {} if res_json is None else res_json
             except (client_exceptions.ContentTypeError, json.decoder.JSONDecodeError):
                 res_json = {}
-            request_info['response'] = res_json
+
             response.append(res_json)
             response_headers.append(dict(res.headers))
 
-            api_info_list.append(
-                {
-                    'path': url,
-                    'params': params,
-                    'data': data,
-                    'headers': headers,
-                    'response': res_json
-                }
-            )
             # 判断响应结果，调整校验内容收集
             if res.status != check['status_code']:
-                request_info['actual'] = {'status_code': [res.status]}
+                actual = {'status_code': [res.status]}
             else:
                 new_check = copy.deepcopy(check)
                 del new_check['status_code']
-                request_info['actual'] = {
+                actual = {
                     **{'status_code': [res.status]},
                     **{k: jsonpath.jsonpath(res_json, f'$..{k}') for k in new_check if 'sql_' not in k},
                     **{k: [new_check[k][1]] for k in new_check if 'sql_' in k}
@@ -252,9 +281,52 @@ class RunApi:
 
             config['sleep'] = 0.3
             await asyncio.sleep(config['sleep'])
-            result.append(request_info)
             logger.debug(f"case_id:{case_id},响应信息: {json.dumps(res_json, indent=2, ensure_ascii=False)}")
             logger.info(f"{'=' * 30}case_id:{case_id},结束请求,number:{num}{'=' * 30}")
+
+            self.api_report['fail_stop'] = config.get('fail_stop', False)
+            self.api_report['initiative_stop'] = config.get('stop', False)
+
+            # 接口测试报告详情数据收集
+            CASE_RESPONSE[case_id].append(
+                {
+                    'path': url,
+                    'params': params,
+                    'data': request_info['__data'],
+                    'headers': dict(res.headers),
+                    'response': res_json,
+                }
+            )
+
+            api_detail['number'] = num
+            api_detail['status'] = 'pass' if not is_fail else 'fail'
+            api_detail['method'] = temp_data[num].method
+            api_detail['host'] = temp_data[num].host
+            api_detail['path'] = case_data[num].path
+            api_detail['run_time'] = response_time
+            api_detail['request_info'] = request_info
+            api_detail['response_info'] = {
+                'status_code': res.status,
+                'response': res_json,
+                'response_headers': dict(res.headers)
+            }
+            api_detail['expect_info'] = check
+            api_detail['actual_info'] = actual
+            api_detail['jsonpath_info'] = js_count(
+                case_id=case_id,
+                case_list=[case_data[num]],
+                temp_list=[temp_data[num]],
+                run_case=CASE_RESPONSE
+            )
+            api_detail['conf_info'] = config
+            api_detail['other_info'] = {
+                'description': case_data[num].description if case_data[num].description else '--',
+                'timestamp': time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+                'file': True if temp_data[num].file else False,
+                'assert_info': result
+            }
+
+            api_detail_list.append(api_detail)
 
             # 失败停止的判断
             if setting['global_fail_stop'] and is_fail and config.get('fail_stop'):
@@ -273,23 +345,25 @@ class RunApi:
                 await self.sees.close()
                 break
 
-        CASE_RESULT[case_id] = result
+        CASE_RESULT[case_id] = api_detail_list
 
         asyncio.create_task(self._del_case_status(random_key))
-        await self._add_response(api_info_list=api_info_list, case_id=case_id)
+        # await self._add_response(api_info_list=api_detail_list, case_id=case_id)
 
         case_info = await service_crud.get_case_info(db=db, case_id=case_id)
 
-        await crud.queue_add(db=db, data={
-            'start_time': int(time.time() * 1000),
-            'case_name': f'{temp_pro}-{temp_name}-{case_info[0].case_name}',
-            'case_data': result
-        })
+        # 填充报告列表信息
+        self.api_report['case_id'] = case_id
+        self.api_report['total_api'] = len(temp_data)
+        self.api_report['is_fail'] = all_is_fail
+        self.api_report['avg_time'] = self.api_report['total_time'] / self.api_report['run_api']
+
+        # 存入api报告
+        await write_api_report(db=db, api_report=self.api_report, api_detail=api_detail_list)
+
         logger.info(f"用例: {temp_pro}-{temp_name}-{case_info[0].case_name} 执行完成, 进行结果校验, 序号: {case_info[0].run_order}")
         await self.sees.close()
-        return f"{temp_pro}-{temp_name}-{case_info[0].case_name}", \
-               is_fail, \
-               total_time
+        return f"{temp_pro}-{temp_name}-{case_info[0].case_name}", self.api_report
 
     @staticmethod
     async def _check_count(check: dict):
@@ -349,7 +423,7 @@ class RunApi:
 
         # check = copy.deepcopy(check)
         CASE_STATUS[random_key]['request_info'] = request_info
-        is_fail = False  # 标记是否失败
+        polling_fail = False  # 标记是否失败
         num = 0
         while True:
             logger.debug(f"循环case_id:{case_id},{num + 1}次: {request_info['url']}")
@@ -366,7 +440,7 @@ class RunApi:
 
             start_time = time.monotonic()
             res = await self.sees.request(**request_info, allow_redirects=False)
-            response_time = int((time.monotonic() - start_time) * 1000)
+            response_time = time.monotonic() - start_time
 
             if files:
                 request_info['data'] = [
@@ -379,8 +453,29 @@ class RunApi:
                 ]
 
             status_code = check['status_code']
-            if check['status_code'] != res.status:
-                is_fail = True
+
+            result = []
+            is_fail = await AssertCase.assert_case(
+                k='status_code',
+                compare='==',
+                expect=status_code,
+                actual=res.status,
+                result=result
+            )
+            if is_fail:
+                polling_fail = True
+
+                # 状态码错误，后面未校验的内容自动设置为跳过
+                del check['status_code']
+                result += [{
+                    "key": k,
+                    "actual": '-',
+                    "compare": v[0] if not isinstance(v, (str, int, float, bool, dict)) else '==',
+                    "expect": v[1] if not isinstance(v, (str, int, float, bool, dict)) else v,
+                    "is_fail": 'skip',
+                } for k, v in check.items()]
+                check['status_code'] = status_code
+
                 break
             del check['status_code']
 
@@ -391,15 +486,21 @@ class RunApi:
                 res_json = {}
 
             CASE_STATUS[random_key]['response_info'] = res_json
-            result = []
+
             for k, v in check.items():
                 # 从数据库获取需要的值
                 if isinstance(v, list) and 'sql_' == k[:4]:
                     sql_data = await self._sql_data(v[1], db_config)
-                    if v[0] == sql_data[0]:
-                        result.append({k: sql_data[0]})
-                    else:
-                        is_fail = True
+                    is_fail = await AssertCase.assert_case(
+                        k=k,
+                        compare='==',
+                        expect=v[0],
+                        actual=sql_data[0],
+                        result=result
+                    )
+                    if is_fail:
+                        polling_fail = True
+
                     check[k][1] = sql_data[0]
                     continue
 
@@ -410,72 +511,24 @@ class RunApi:
                     value = value[0]
 
                 if isinstance(v, (str, int, float, bool, dict)):
-                    if v == value:
-                        result.append({k: value})
-                    else:
-                        is_fail = True
+                    is_fail = await AssertCase.assert_case(
+                        k=k,
+                        compare='==',
+                        expect=v,
+                        actual=value,
+                        result=result
+                    )
+                else:
+                    is_fail = await AssertCase.assert_case(
+                        k=k,
+                        compare=v[0],
+                        expect=v[1],
+                        actual=value,
+                        result=result
+                    )
 
-                elif isinstance(v, list):
-                    if v[0] == '<':
-                        if value < v[1]:
-                            result.append({k: value})
-                        else:
-                            is_fail = True
-                    elif v[0] == '<=':
-                        if value <= v[1]:
-                            result.append({k: value})
-                        else:
-                            is_fail = True
-                    elif v[0] == '==':
-                        if value == v[1]:
-                            result.append({k: value})
-                        else:
-                            is_fail = True
-                    elif v[0] == '!=':
-                        if value != v[1]:
-                            result.append({k: value})
-                        else:
-                            is_fail = True
-                    elif v[0] == '>=':
-                        if value >= v[1]:
-                            result.append({k: value})
-                        else:
-                            is_fail = True
-                    elif v[0] == '>':
-                        if value > v[1]:
-                            result.append({k: value})
-                        else:
-                            is_fail = True
-                    elif v[0] == 'in':
-                        if value in str(v[1]):
-                            result.append({k: value})
-                        else:
-                            is_fail = True
-                    elif v[0] == '!in':
-                        if v[1] in str(value):
-                            result.append({k: value})
-                        else:
-                            is_fail = True
-                    elif v[0] == 'not in':
-                        if value not in str(v[1]):
-                            result.append({k: value})
-                        else:
-                            is_fail = True
-                    elif v[0] == 'notin':
-                        if value not in str(v[1]):
-                            result.append({k: value})
-                        else:
-                            is_fail = True
-                    elif v[0] == '!not in':
-                        if v[1] not in str(value):
-                            result.append({k: value})
-                        else:
-                            is_fail = True
-                    elif v[0] == '!notin':
-                        if v[1] not in str(value):
-                            result.append({k: value})
-                        else:
-                            is_fail = True
+                if is_fail:
+                    polling_fail = True
 
             logger.info(f"第{num + 1}次匹配")
             logger.debug(f"实际-{result}")
@@ -490,9 +543,11 @@ class RunApi:
             CASE_STATUS[random_key]['actual'] = result
 
             check['status_code'] = status_code
-            if len(check) == len(result) + 1:
-                is_fail = False
+            if len(check) == len([x for x in result if x['is_fail'] == 'pass']):
+                polling_fail = False
                 break
+            else:
+                polling_fail = True
 
             if sleep < 5:
                 break
@@ -501,7 +556,7 @@ class RunApi:
             sleep -= 5
             num += 1
 
-        return res, is_fail, response_time
+        return res, polling_fail, response_time, result
 
     @staticmethod
     async def _sql_data(sql: str, db_config: dict):
@@ -548,9 +603,17 @@ class RunApi:
     @staticmethod
     async def _add_response(api_info_list: list, case_id: int):
         """
-        添加测试用例的response到缓存种
+        添加测试用例的response到缓存中
         :param api_info_list:
         :param case_id:
         :return:
         """
-        CASE_RESPONSE[case_id] = api_info_list
+        CASE_RESPONSE[case_id] = [
+            {
+                'path': x['request_info']['url'],
+                'params': x['request_info']['params'],
+                'data': x['request_info']['__data'],
+                'headers': x['response_info']['response_headers'],
+                'response': x['response_info']['response'],
+            } for x in api_info_list
+        ]

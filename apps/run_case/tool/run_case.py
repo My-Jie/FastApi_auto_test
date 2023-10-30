@@ -23,7 +23,7 @@ from apps.case_service import crud as case_crud
 from apps.template import crud as temp_crud
 from apps.whole_conf import crud as conf_crud
 from apps.case_ui import crud as ui_crud
-from apps.run_case.tool import RunApi, run
+from apps.run_case.tool import RunApi
 from tools.read_setting import setting
 from apps.run_case.tool.header_host import whole_host
 from apps.run_case.tool.run_ui import run_ui
@@ -60,7 +60,7 @@ async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict 
             project_code = await conf_crud.get_project_code(db=db, id_=temp_info[0].project_name)
             # 处理数据，执行用例
             try:
-                case, is_fail, total_time = await RunApi().fo_service(
+                case, api_report = await RunApi().fo_service(
                     db=db,
                     case_id=case_id,
                     temp_data=temp_data,
@@ -81,22 +81,15 @@ async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict 
             except IndexError as e:
                 raise Exception(f': {str(e)}')
 
-            # 执行用例
-            allure_plus_dir, allure_path = await run(
-                test_path='./apps/run_case/test_case/test_service.py',
-                allure_dir=setting['allure_path'],
-                case_id=case_id,
-            )
-
             report_list.append(
                 {
-                    'allure_plus_dir': allure_plus_dir,
-                    'allure_path': allure_path,
                     'case_name': case,
                     'case_id': case_id,
-                    'allure_dir': setting['allure_path'],
-                    'is_fail': is_fail,
-                    'total_time': total_time,
+                    'is_fail': api_report['is_fail'],
+                    'total_time': api_report['total_time'],
+                    'run_order': api_report['run_order'],
+                    'success': api_report['success_case'],
+                    'fail': api_report['fail_case'],
                 }
             )
         else:
@@ -131,7 +124,7 @@ async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_
         project_code = await conf_crud.get_project_code(db=db, id_=temp_info[0].project_name)
         # 处理数据，执行用例
         try:
-            case, is_fail, total_time = await RunApi().fo_service(
+            case, api_report = await RunApi().fo_service(
                 db=db,
                 case_id=case_id,
                 temp_data=copy.deepcopy(temp_data),
@@ -152,22 +145,15 @@ async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_
         except IndexError as e:
             raise Exception(f': {str(e)}')
 
-        # 执行用例
-        allure_plus_dir, allure_path = await run(
-            test_path='./apps/run_case/test_case/test_service.py',
-            allure_dir=setting['allure_path'],
-            case_id=case_id,
-        )
-
         report_list.append(
             {
-                'allure_plus_dir': allure_plus_dir,
-                'allure_path': allure_path,
                 'case_name': case,
                 'case_id': case_id,
-                'allure_dir': setting['allure_path'],
-                'is_fail': is_fail,
-                'total_time': total_time,
+                'is_fail': api_report['is_fail'],
+                'total_time': api_report['total_time'],
+                'run_order': api_report['run_order'],
+                'success': api_report['success_case'],
+                'fail': api_report['fail_case'],
             }
         )
 

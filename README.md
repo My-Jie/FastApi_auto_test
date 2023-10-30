@@ -78,6 +78,14 @@
     
 [随便测测-做UI测试](https://blog.csdn.net/yangj507/article/details/131579327)
 
+## v2.5 api测试取消allure测试报告，使用自身页面
+![image](img/1698674615297.jpg)
+![image](img/1698674641944.jpg)
+![image](img/1698674680948.jpg)
+![image](img/1698674693771.jpg)
+* 测试报告包含：报告列表、趋势图、测试详情数据
+* 目前仅api测试使用自身测试报告，ui测试暂时继续使用allure
+
 ## v2.4.7ui用例也支持批量选择数据集执行了
 ![image](img/1693836296042.jpg)
 * 和api用例几乎相同的操作模式

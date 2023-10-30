@@ -71,7 +71,16 @@ def str_count(str_data: str):
     return target
 
 
-def count(case_id: int, case_list: list, temp_list: list, run_case: dict):
+def count(case_id: int, case_list: list, temp_list: list, run_case: dict, get_temp_value=False):
+    """
+
+    :param case_id:
+    :param case_list:
+    :param temp_list:
+    :param run_case:
+    :param get_temp_value: 是否获取temp_value的数据
+    :return:
+    """
     data_count = {}
     for i, case in enumerate(case_list):
         for k, v in str_count(case.path).items():
@@ -225,8 +234,11 @@ def count(case_id: int, case_list: list, temp_list: list, run_case: dict):
         if 'h$' in k:
             new_key = new_key.replace('h$', '$')
             number, json_path = new_key.split('.', 1)
-            temp_value = jsonpath.jsonpath(temp_list[int(number)].headers, json_path)
-            temp_value = temp_value[0] if temp_value else '-'
+            if get_temp_value:
+                temp_value = jsonpath.jsonpath(temp_list[int(number)].headers, json_path)
+                temp_value = temp_value[0] if temp_value else '-'
+            else:
+                temp_value = '-'
 
             try:
                 case_value = jsonpath.jsonpath(run_case.get(
@@ -238,8 +250,11 @@ def count(case_id: int, case_list: list, temp_list: list, run_case: dict):
                 case_value = case_value[0] if case_value else '-'
         else:
             number, json_path = new_key.split('.', 1)
-            temp_value = jsonpath.jsonpath(temp_list[int(number)].response, json_path)
-            temp_value = temp_value[0] if temp_value else '-'
+            if get_temp_value:
+                temp_value = jsonpath.jsonpath(temp_list[int(number)].response, json_path)
+                temp_value = temp_value[0] if temp_value else '-'
+            else:
+                temp_value = '-'
 
             try:
                 case_value = jsonpath.jsonpath(run_case.get(
