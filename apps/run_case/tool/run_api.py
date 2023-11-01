@@ -268,7 +268,7 @@ class RunApi:
             response_headers.append(dict(res.headers))
 
             # 判断响应结果，调整校验内容收集
-            if res.status != check['status_code']:
+            if res.status != check.get('status_code', 9999):
                 actual = {'status_code': [res.status]}
             else:
                 new_check = copy.deepcopy(check)
