@@ -28,7 +28,6 @@ from apps.whole_conf import crud as conf_crud
 from tools.read_setting import setting
 from tools.load_allure import load_allure_report
 from .tool import run_service_case, run_ddt_case, run_ui_case, header, allure_generate
-from .tool import report as header_report
 
 run_case = APIRouter()
 
@@ -55,8 +54,6 @@ async def run_case_name(ids: schemas.RunCase, db: Session = Depends(get_db)):
         case_ids=ids.case_ids,
         setting_info_dict=SETTING_INFO_DICT.get(ids.setting_list_id, {})
     )
-
-    # await header_report(db=db, report=report_list)
 
     if SETTING_INFO_DICT.get(ids.setting_list_id):
         del SETTING_INFO_DICT[ids.setting_list_id]
@@ -99,8 +96,6 @@ async def run_case_name(temp_ids: List[int], db: Session = Depends(get_db)):
     for report_list in case_info:
         new_report += report_list
 
-        await header_report(db=db, report=report_list)
-
     return await response_code.resp_200(data={'report': new_report, "temp_info": temp_info})
 
 
@@ -142,7 +137,6 @@ async def run_case_gather(rcs: schemas.RunCaseGather, db: Session = Depends(get_
         new_report = []
         for report_list in case_info:
             new_report += report_list
-            await header_report(db=db, report=report_list)
 
         if SETTING_INFO_DICT.get(rcs.setting_list_id):
             del SETTING_INFO_DICT[rcs.setting_list_id]
@@ -155,7 +149,7 @@ async def run_case_gather(rcs: schemas.RunCaseGather, db: Session = Depends(get_
             case_info=new_case_data,
             setting_info_dict=SETTING_INFO_DICT.get(rcs.setting_list_id, {})
         )
-        await header_report(db=db, report=report_list)
+        # await header_report(db=db, report=report_list)
 
         if SETTING_INFO_DICT.get(rcs.setting_list_id):
             del SETTING_INFO_DICT[rcs.setting_list_id]
