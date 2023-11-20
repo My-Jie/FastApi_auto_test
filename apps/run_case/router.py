@@ -22,7 +22,7 @@ from apps.template import crud
 from apps.case_service import crud as case_crud
 from apps.case_ddt import crud as gather_crud
 from apps.case_ui import crud as ui_crud
-from apps.run_case import schemas, CASE_STATUS, SETTING_INFO_DICT, CASE_RESPONSE, CASE_RESULT
+from apps.run_case import schemas, CASE_STATUS, SETTING_INFO_DICT, CASE_RESPONSE
 from apps.setting_bind import crud as setting_crud
 from apps.whole_conf import crud as conf_crud
 from tools.read_setting import setting
@@ -494,14 +494,3 @@ async def get_api_info(case_id: int, type_: str, number: int):
             return None
     else:
         return None
-
-
-@run_case.get(
-    '/get/case/schedule',
-    name='测试用例执行完成后的完整请求响应信息'
-)
-async def get_case_schedule(case_id: int):
-    if CASE_RESULT.get(case_id):
-        return CASE_RESULT[case_id]
-    else:
-        return []

@@ -22,7 +22,7 @@ from apps.whole_conf.router import conf
 from apps.setting_bind.router import setting_
 from apps.statistic.router import statistic
 from apps.api_report.router import api_report
-# from apps.status.router import ws_app
+from apps.status.router import ws_app
 from tools.load_allure import load_allure_reports
 from fastapi.staticfiles import StaticFiles
 from apps import response_code
@@ -63,7 +63,7 @@ app.include_router(conf, prefix='/conf', tags=['全局配置'])
 app.include_router(setting_, prefix='/setting', tags=['环境组装'])
 app.include_router(api_report, prefix='/report', tags=['接口报告'])
 app.include_router(pool, prefix='/YApi', tags=['YApi接口池'])
-# app.include_router(ws_app, prefix='/ws', tags=['状态'])
+app.include_router(ws_app, prefix='/ws', tags=['状态'])
 
 
 # 测试报告路径

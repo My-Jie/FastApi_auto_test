@@ -30,7 +30,6 @@ class AssertCase:
         :param compare: 比较符
         :param expect: 预期值
         :param actual: 实际值
-        # :param is_fail: 是否失败
         :param result: 校验结果集
         :return:
         """

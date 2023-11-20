@@ -28,7 +28,7 @@ from apps.template import schemas as temp
 from apps.case_service import schemas as service
 from apps.case_service import crud as service_crud
 from apps.case_service.tool import js_count
-from apps.run_case import CASE_STATUS, CASE_RESPONSE, CASE_RESULT
+from apps.run_case import CASE_STATUS, CASE_RESPONSE, CASE_STATUS_LIST
 from apps.api_report.tool import write_api_report
 from .check_data import check_customize
 from tools import replace_data
@@ -47,6 +47,7 @@ class RunApi:
         # 用例执行的实时状态
         self.case_status = {
             'case_id': 0,
+            'number': 0,
             'total': 0,
             'stop': False,
             'success': 0,
@@ -56,6 +57,13 @@ class RunApi:
             'expect': {},
             'request_info': {},
             'response_info': {},
+            'time': 0,
+            'time_str': '',
+            'is_fail': False,
+            'status_code': None,
+            'run_time': 0,
+            'is_login': False,
+            'run': True
         }
 
         # 测试报告列表数据
@@ -99,10 +107,11 @@ class RunApi:
 
         self.case_status['case_id'] = case_id
         self.case_status['total'] = len(temp_data)
-        CASE_STATUS[random_key] = self.case_status
+        CASE_STATUS_LIST[random_key] = []
 
         temp_data = copy.deepcopy(temp_data)
         case_data = copy.deepcopy(case_data)
+        CASE_STATUS[random_key] = copy.deepcopy(self.case_status)
 
         # *提取数据的收集*
         response = []
@@ -225,17 +234,27 @@ class RunApi:
             if is_fail:
                 all_is_fail = is_fail
 
+            CASE_STATUS[random_key]['number'] = num
+            CASE_STATUS[random_key]['time'] = int(time.time() * 1000)
+            CASE_STATUS[random_key]['time_str'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+            CASE_STATUS[random_key]['status_code'] = res.status
+            CASE_STATUS[random_key]['run_time'] = response_time
+
             if not is_fail:
                 self.api_report['success'] += 1
-                CASE_STATUS[random_key]['success'] = self.api_report['success']
+                CASE_STATUS[random_key]['success'] += 1
             else:
                 self.api_report['fail'] += 1
-                CASE_STATUS[random_key]['fail'] = self.api_report['fail']
+                CASE_STATUS[random_key]['fail'] += 1
+                CASE_STATUS[random_key]['is_fail'] = True
 
             self.api_report['run_api'] += 1
 
             if config['is_login']:
                 self.cookies[temp_data[num].host] = await get_cookie(rep_type='aiohttp', response=res)
+                CASE_STATUS[random_key]['is_login'] = True
+            else:
+                CASE_STATUS[random_key]['is_login'] = False
 
             # 提取code
             # if config.get('code'):
@@ -327,28 +346,32 @@ class RunApi:
             }
 
             api_detail_list.append(api_detail)
+            CASE_STATUS_LIST[random_key].append(copy.deepcopy(CASE_STATUS[random_key]))
 
             # 失败停止的判断
             if setting['global_fail_stop'] and is_fail and config.get('fail_stop'):
+                CASE_STATUS[random_key]['run'] = False
                 logger.info(f"case_id:{case_id},编号: {num} 校验错误-退出执行")
                 await self.sees.close()
                 break
 
             if config.get('stop'):
+                CASE_STATUS[random_key]['run'] = False
                 logger.info(f"case_id:{case_id},number:{num} 接口配置信息stop = {config['stop']}, 停止后续接口请求")
                 await self.sees.close()
                 break
 
             if CASE_STATUS[random_key]['stop']:
+                CASE_STATUS[random_key]['run'] = False
                 logger.info(f"case_id:{case_id},number:{num} 手动停止执行")
                 del CASE_STATUS[random_key]
                 await self.sees.close()
                 break
 
-        CASE_RESULT[case_id] = api_detail_list
+        if CASE_STATUS_LIST.get(random_key):
+            CASE_STATUS_LIST[random_key][-1]['run'] = False
 
         asyncio.create_task(self._del_case_status(random_key))
-        # await self._add_response(api_info_list=api_detail_list, case_id=case_id)
 
         case_info = await service_crud.get_case_info(db=db, case_id=case_id)
 
@@ -361,7 +384,8 @@ class RunApi:
         # 存入api报告
         await write_api_report(db=db, api_report=self.api_report, api_detail=api_detail_list)
 
-        logger.info(f"用例: {temp_pro}-{temp_name}-{case_info[0].case_name} 执行完成, 进行结果校验, 序号: {case_info[0].run_order}")
+        logger.info(
+            f"用例: {temp_pro}-{temp_name}-{case_info[0].case_name} 执行完成, 进行结果校验, 序号: {case_info[0].run_order}")
         await self.sees.close()
         return f"{temp_pro}-{temp_name}-{case_info[0].case_name}", self.api_report
 
@@ -395,8 +419,9 @@ class RunApi:
         :param random_key:
         :return:
         """
-        await asyncio.sleep(20)
+        await asyncio.sleep(5)
         if CASE_STATUS.get(random_key):
+            logger.info(f"延迟删除:{random_key},成功")
             del CASE_STATUS[random_key]
 
     async def _polling(
@@ -599,21 +624,3 @@ class RunApi:
             del tmp_header['Content-Length']
 
         return tmp_header
-
-    @staticmethod
-    async def _add_response(api_info_list: list, case_id: int):
-        """
-        添加测试用例的response到缓存中
-        :param api_info_list:
-        :param case_id:
-        :return:
-        """
-        CASE_RESPONSE[case_id] = [
-            {
-                'path': x['request_info']['url'],
-                'params': x['request_info']['params'],
-                'data': x['request_info']['__data'],
-                'headers': x['response_info']['response_headers'],
-                'response': x['response_info']['response'],
-            } for x in api_info_list
-        ]
