@@ -239,22 +239,15 @@ class RunApi:
             CASE_STATUS[random_key]['time_str'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
             CASE_STATUS[random_key]['status_code'] = res.status
             CASE_STATUS[random_key]['run_time'] = response_time
+            CASE_STATUS[random_key]['is_fail'] = is_fail
+            CASE_STATUS[random_key]['success' if not is_fail else 'fail'] += 1
+            CASE_STATUS[random_key]['is_login'] = config['is_login']
 
-            if not is_fail:
-                self.api_report['success'] += 1
-                CASE_STATUS[random_key]['success'] += 1
-            else:
-                self.api_report['fail'] += 1
-                CASE_STATUS[random_key]['fail'] += 1
-                CASE_STATUS[random_key]['is_fail'] = True
-
+            self.api_report['success' if not is_fail else 'fail'] += 1
             self.api_report['run_api'] += 1
 
             if config['is_login']:
                 self.cookies[temp_data[num].host] = await get_cookie(rep_type='aiohttp', response=res)
-                CASE_STATUS[random_key]['is_login'] = True
-            else:
-                CASE_STATUS[random_key]['is_login'] = False
 
             # 提取code
             # if config.get('code'):
