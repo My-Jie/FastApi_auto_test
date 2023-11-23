@@ -487,8 +487,8 @@ async def set_api_description(sad: schemas.SetApiDescription, db: Session = Depe
     """
     设置每个接口的描述信息
     """
-    if not sad.description:
-        return await response_code.resp_400(message='无效描述内容')
+    # if not sad.description:
+    #     return await response_code.resp_400(message='无效描述内容')
 
     case_data = await crud.get_case_data(db=db, case_id=sad.case_id, number=sad.number)
     if not case_data:
