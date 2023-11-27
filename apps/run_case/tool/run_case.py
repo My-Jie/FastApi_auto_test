@@ -25,11 +25,11 @@ from apps.whole_conf import crud as conf_crud
 from apps.case_ui import crud as ui_crud
 from apps.run_case.tool import RunApi
 from tools.read_setting import setting
-from apps.run_case.tool.header_host import whole_host
+from apps.run_case.tool.handle_host import whole_host
 from apps.run_case.tool.run_ui import run_ui
 from apps.run_case import SETTING_INFO_DICT, schemas
 from .check_data import check_customize
-from .header_playwright import replace_playwright
+from .handle_playwright import replace_playwright
 
 
 async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict = None):

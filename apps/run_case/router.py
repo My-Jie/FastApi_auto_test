@@ -27,7 +27,7 @@ from apps.setting_bind import crud as setting_crud
 from apps.whole_conf import crud as conf_crud
 from tools.read_setting import setting
 from tools.load_allure import load_allure_report
-from .tool import run_service_case, run_ddt_case, run_ui_case, header, allure_generate
+from .tool import run_service_case, run_ddt_case, run_ui_case, handle, allure_generate
 
 run_case = APIRouter()
 
@@ -117,7 +117,7 @@ async def run_case_gather(rcs: schemas.RunCaseGather, db: Session = Depends(get_
 
     # 获取用例数据,按数据集分套替换数据
     case_data = await case_crud.get_case_data(db=db, case_id=rcs.case_id)
-    new_case_data = await header(case_data=case_data, gather_data=gather_data)
+    new_case_data = await handle(case_data=case_data, gather_data=gather_data)
 
     # 运行用例
     if rcs.async_:

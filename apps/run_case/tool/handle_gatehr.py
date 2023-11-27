@@ -3,14 +3,14 @@
 
 """
 @Author: Kobayasi
-@File: header_gatehr.py
+@File: handle_gatehr.py
 @Time: 2023/3/11-22:36
 """
 
 import copy
 
 
-async def header(case_data: list, gather_data: list):
+async def handle(case_data: list, gather_data: list):
     """
     把数据集替换到测试数据中
     :param case_data:
