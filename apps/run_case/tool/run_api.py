@@ -376,7 +376,8 @@ class RunApi:
                 res_json=res_json,
                 check=check,
                 result=result,
-                files=files
+                files=files,
+                stop=CASE_STATUS.get(random_key, {}).get('stop', False)
             )
             CASE_STATUS[random_key] = copy.deepcopy(self.status.case_status)
             CASE_STATUS_LIST[random_key].append(copy.deepcopy(self.status.case_status))

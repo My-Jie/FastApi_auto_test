@@ -105,7 +105,6 @@ class CaseStatus:
         self.case_status = {
             'success': 0,
             'fail': 0,
-            'stop': False,
             'case_id': case_id,
             'total': total,
             'run': True
@@ -123,7 +122,8 @@ class CaseStatus:
             res_json: dict,
             check: dict,
             result: dict,
-            files: list
+            files: list,
+            stop: bool
     ):
         self.case_status['number'] = number
         self.case_status['time'] = int(time.time() * 1000)
@@ -133,13 +133,15 @@ class CaseStatus:
         self.case_status['status_code'] = res.status
         self.case_status['run_time'] = response_time
         self.case_status['is_fail'] = is_fail
-        self.case_status['success' if not is_fail else 'fail'] += 1
+        if num < 1:
+            self.case_status['success' if not is_fail else 'fail'] += 1
         self.case_status['is_login'] = config['is_login']
         self.case_status['response_info'] = res_json
         self.case_status['sleep'] = config['sleep']
         self.case_status['expect'] = check
         self.case_status['actual'] = result
         self.case_status['continued'] = False if num < 1 else True
+        self.case_status['stop'] = stop
 
         if files:
             request_info['data'] = [
