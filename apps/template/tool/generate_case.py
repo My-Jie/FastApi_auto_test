@@ -27,6 +27,7 @@ class GenerateCase:
     ):
         """
         读取模板生成准测试数据
+        :param db:
         :param temp_name:
         :param mode:
         :param fail_stop:
@@ -37,28 +38,27 @@ class GenerateCase:
 
         case_data_list = []
         temp_id = None
-        for num in range(len(template_data)):
+        for num, template in enumerate(template_data):
             if num == 0:
-                params = template_data[num].params
-                data = template_data[num].data
+                params = template.params
+                data = template.data
             else:
-                params = await self._extract_params_keys(param=template_data[num].params, response=response[:num])
-                data = await self._extract_params_keys(param=template_data[num].data, response=response[:num])
-
+                params = await self._extract_params_keys(param=template.params, response=response[:num])
+                data = await self._extract_params_keys(param=template.data, response=response[:num])
             auto_check = await my_auto_check(db=db)
             case_data = {
-                'number': template_data[num].number,
-                'path': template_data[num].path,
+                'number': template.number,
+                'path': template.path,
                 'headers': {},
                 'params': params,
                 'data': data,
-                'file': True if template_data[num].file else False,
+                'file': True if template.file else False,
                 'check': {
-                    **{'status_code': template_data[num].code},
+                    **{'status_code': template.code},
                     **{k: v for k, v in auto_check.items() if
-                       isinstance(template_data[num].response, dict) and template_data[num].response.get(k) == v}
+                       isinstance(template.response, dict) and template.response.get(k) == v}
                 },
-                'description': template_data[num].description,
+                'description': template.description,
                 'config': {
                     'is_login': True if num == 0 else None,
                     'sleep': 0.3,
@@ -68,7 +68,7 @@ class GenerateCase:
                     'fail_stop': fail_stop
                 }
             }
-            temp_id = template_data[num].temp_id
+            temp_id = template.temp_id
             case_data_list.append(case_data)
 
         return {
@@ -93,35 +93,34 @@ class GenerateCase:
             if isinstance(data, list):
                 return [header_key(x) for x in data]
 
-            if isinstance(data, str):
+            if isinstance(data, (str, int, float, bool)):
                 return data
 
             target = {}
             for key in data.keys():
-                for x in range(len(response)):
-                    value = jsonpath.jsonpath(response[x], f"$..{key}")
+                for x, res in enumerate(response):
+                    value = jsonpath.jsonpath(res, f"$..{key}")
                     if isinstance(value, list):
-                        ipath = jsonpath.jsonpath(response[x], f"$..{key}", result_type='IPATH')[0]
+                        ipath = jsonpath.jsonpath(res, f"$..{key}", result_type='IPATH')[0]
                         if key.lower() == ipath[-1].lower() and data[key] == value[0] and value[0]:
-                            value = "{{" + f"{x}.$.{'.'.join(ipath)}" + "}}"
-                            target[key] = value
+                            target[key] = "{{" + f"{x}.$.{'.'.join(ipath)}" + "}}"
                             break
                         else:
                             target[key] = data[key]
                     else:
                         target[key] = data[key]
-                else:
-                    if isinstance(data[key], dict):
-                        header_key(data[key])
-                        continue
-
-                    if isinstance(data[key], list):
-                        for k in data[key]:
-                            if isinstance(k, (list, dict)):
-                                header_key(k)
-                            else:
-                                target[key] = data[key]
-                        continue
+                # else:
+                #     if isinstance(data[key], dict):
+                #         header_key(data[key])
+                #         continue
+                #
+                #     if isinstance(data[key], list):
+                #         for k in data[key]:
+                #             if isinstance(k, (list, dict)):
+                #                 header_key(k)
+                #             else:
+                #                 target[key] = data[key]
+                #         continue
 
             return target
 
