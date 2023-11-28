@@ -127,14 +127,10 @@ class CaseStatus:
     ):
         self.case_status['number'] = number
         self.case_status['time'] = int(time.time() * 1000)
-        self.case_status['time_str'] = time.strftime(
-            '%Y-%m-%d %H:%M:%S', time.localtime(time.time())
-        )
+        self.case_status['time_str'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
         self.case_status['status_code'] = res.status
         self.case_status['run_time'] = response_time
         self.case_status['is_fail'] = is_fail
-        if num < 1:
-            self.case_status['success' if not is_fail else 'fail'] += 1
         self.case_status['is_login'] = config['is_login']
         self.case_status['response_info'] = res_json
         self.case_status['sleep'] = config['sleep']
@@ -142,6 +138,9 @@ class CaseStatus:
         self.case_status['actual'] = result
         self.case_status['continued'] = False if num < 1 else True
         self.case_status['stop'] = stop
+
+        if num < 1:
+            self.case_status['success' if not is_fail else 'fail'] += 1
 
         if files:
             request_info['data'] = [

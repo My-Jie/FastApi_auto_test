@@ -18,7 +18,6 @@ from aiohttp import client_exceptions
 from typing import List
 from sqlalchemy.orm import Session
 from tools import logger, get_cookie, AsyncMySql
-from tools.faker_data import FakerData
 # from .extract import extract as my_extract
 from tools.read_setting import setting
 from apps.template import schemas as temp
@@ -40,7 +39,6 @@ class RunApi:
         self.cookies = {}
         self.code = None  # 存验证码数据
         self.extract = None  # 存提取的内容
-        self.fk = FakerData()
         self.status = None
 
     async def fo_service(
@@ -71,8 +69,7 @@ class RunApi:
         data_processing = DataProcessing(db=db, code=self.code, extract=self.extract)  # 请求前的数据处理
 
         # *响应数据收集，用于数据提取*
-        response = []
-        response_headers = []
+        response_data = {'response': [], 'headers': []}
 
         # 数据收集
         api_detail_list = []  # 接口详情
@@ -90,8 +87,8 @@ class RunApi:
                 url, params, data, case_header, check = await data_processing.processing(
                     case_data=case_data[num],
                     temp_data=temp_data[num],
-                    response=response,
-                    response_headers=response_headers,
+                    response=response_data['response'],
+                    response_headers=response_data['headers'],
                     customize=customize,
                 )
             except IndexError:
@@ -139,8 +136,8 @@ class RunApi:
             #         index=_extract[1]
             #     )
 
-            response.append(res_json)
-            response_headers.append(dict(res.headers))
+            response_data['response'].append(res_json)
+            response_data['headers'].append(dict(res.headers))
 
             # 判断响应结果，调整校验内容收集
             if res.status != check.get('status_code', 9999):
@@ -232,29 +229,6 @@ class RunApi:
         logger.info(f"用例: {temp_pro}-{temp_name}-{case_info[0].case_name} 执行完成, 序号: {case_info[0].run_order}")
         return f"{temp_pro}-{temp_name}-{case_info[0].case_name}", report.api_report
 
-    @staticmethod
-    async def _check_count(check: dict):
-        """
-        对校验数据进行加减乘除
-        :param check:
-        :return:
-        """
-        for k, v in check.items():
-            for x in replace_data.COUNT:
-                if isinstance(v, list):
-                    if isinstance(v[1], str) and x in v[1]:
-                        try:
-                            v[1] = eval(v[1])
-                            check[k] = v
-                        except NameError:
-                            pass
-                if isinstance(v, str):
-                    if x in v:
-                        try:
-                            check[k] = eval(v)
-                        except NameError:
-                            pass
-
     async def _polling(
             self,
             number: int,
@@ -342,22 +316,13 @@ class RunApi:
                 if value:
                     value = value[0]
                 # 校验结果
-                if isinstance(v, (str, int, float, bool, dict)):
-                    is_fail = await AssertCase.assert_case(
-                        k=k,
-                        compare='==',
-                        expect=v,
-                        actual=value,
-                        result=result
-                    )
-                else:
-                    is_fail = await AssertCase.assert_case(
-                        k=k,
-                        compare=v[0],
-                        expect=v[1],
-                        actual=value,
-                        result=result
-                    )
+                is_fail = await AssertCase.assert_case(
+                    k=k,
+                    compare='==' if isinstance(v, (str, int, float, bool, dict)) else v[0],
+                    expect=v if isinstance(v, (str, int, float, bool, dict)) else v[1],
+                    actual=value,
+                    result=result
+                )
 
                 if is_fail:
                     polling_fail = True
@@ -429,3 +394,26 @@ class RunApi:
         if CASE_STATUS.get(random_key):
             logger.info(f"延迟删除:{random_key},成功")
             del CASE_STATUS[random_key]
+
+    @staticmethod
+    async def _check_count(check: dict):
+        """
+        对校验数据进行加减乘除
+        :param check:
+        :return:
+        """
+        for k, v in check.items():
+            for x in replace_data.COUNT:
+                if isinstance(v, list):
+                    if isinstance(v[1], str) and x in v[1]:
+                        try:
+                            v[1] = eval(v[1])
+                            check[k] = v
+                        except NameError:
+                            pass
+                if isinstance(v, str):
+                    if x in v:
+                        try:
+                            check[k] = eval(v)
+                        except NameError:
+                            pass
