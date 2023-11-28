@@ -107,14 +107,12 @@ class RunApi:
                 temp_data=temp_data[num],
                 cookies=self.cookies
             )
-            logger.debug(f"case_id:{case_id},请求信息: {json.dumps(request_info, indent=2, ensure_ascii=False)}")
 
             # 计算check的内容
             await self._check_count(check=check)
 
             # 轮询执行接口
             res, is_fail, response_time, result, res_json = await self._polling(
-                case_id=case_id,
                 number=num,
                 config=config,
                 check=check,
@@ -123,6 +121,7 @@ class RunApi:
                 random_key=random_key,
                 db_config=db_config
             )
+            logger.debug(f"case_id:{case_id},请求信息: {json.dumps(request_info, indent=2, ensure_ascii=False)}")
             request_info['__data'] = data
 
             if is_fail:
@@ -155,12 +154,10 @@ class RunApi:
                     **{k: [new_check[k][1]] for k in new_check if 'sql_' in k}
                 }
 
-            config['sleep'] = 0.3
-            await asyncio.sleep(config['sleep'])
             logger.debug(f"case_id:{case_id},响应信息: {json.dumps(res_json, indent=2, ensure_ascii=False)}")
             logger.debug(f"{'=' * 30}case_id:{case_id},结束请求,number:{num}{'=' * 30}")
 
-            # 接口测试报告详情数据收集
+            # 存当前测试用例的数据，用于查看jsonpath取值数据
             CASE_RESPONSE[case_id].append(
                 {
                     'path': url,
@@ -184,7 +181,7 @@ class RunApi:
                     request_info=request_info,
                     check=check,
                     actual=actual,
-                    config=config,
+                    config=dict(case_data[num].config),
                     is_fail=is_fail,
                     result=result,
                     case_response=CASE_RESPONSE,
@@ -200,8 +197,8 @@ class RunApi:
                 all_is_fail=all_is_fail,
             )
 
-            #
-            CASE_STATUS_LIST[random_key].append(copy.deepcopy(CASE_STATUS[random_key]))
+            config['sleep'] = 0.3
+            await asyncio.sleep(config['sleep'])
 
             # 失败停止的判断
             if setting['global_fail_stop'] and is_fail and config.get('fail_stop'):
@@ -223,15 +220,16 @@ class RunApi:
                 await self.sees.close()
                 break
 
+        await self.sees.close()
+        # 循环结束后，将最后一个接口信息运行状态设置为false
         if CASE_STATUS_LIST.get(random_key):
             CASE_STATUS_LIST[random_key][-1]['run'] = False
 
         asyncio.create_task(self._del_case_status(random_key))  # 延时删除
-        asyncio.create_task(write_api_report(db=db, api_report=report.api_report, api_detail=api_detail_list))  # 存报告
+        await write_api_report(db=db, api_report=report.api_report, api_detail=api_detail_list)  # 存报告
 
         case_info = await service_crud.get_case_info(db=db, case_id=case_id)
         logger.info(f"用例: {temp_pro}-{temp_name}-{case_info[0].case_name} 执行完成, 序号: {case_info[0].run_order}")
-        await self.sees.close()
         return f"{temp_pro}-{temp_name}-{case_info[0].case_name}", report.api_report
 
     @staticmethod
@@ -259,7 +257,6 @@ class RunApi:
 
     async def _polling(
             self,
-            case_id: int,
             number: int,
             config: dict,
             check: dict,
@@ -270,7 +267,6 @@ class RunApi:
     ):
         """
         轮询执行接口
-        :param case_id:
         :param config:
         :param check:
         :param request_info:
@@ -286,21 +282,11 @@ class RunApi:
         res_json = {}
         sleep = config['sleep']
         while True:
-            logger.info(f"循环case_id:{case_id},{num + 1}次: {request_info['url']}")
+            logger.info(f"{num + 1}次: {request_info['url']}")
 
             start_time = time.monotonic()
             res = await self.sees.request(**request_info, allow_redirects=False)
             response_time = time.monotonic() - start_time
-
-            if files:
-                request_info['data'] = [
-                    {
-                        'name': file['name'],
-                        'content_type': file['contentType'],
-                        'filename': file['fileName']
-
-                    } for file in files
-                ]
 
             status_code = check['status_code']
 
@@ -353,10 +339,9 @@ class RunApi:
 
                 # 从响应信息获取需要的值
                 value = jsonpath.jsonpath(res_json, f'$..{k}')
-
                 if value:
                     value = value[0]
-
+                # 校验结果
                 if isinstance(v, (str, int, float, bool, dict)):
                     is_fail = await AssertCase.assert_case(
                         k=k,
@@ -377,11 +362,11 @@ class RunApi:
                 if is_fail:
                     polling_fail = True
 
-            logger.info(f"第{num + 1}次匹配")
             logger.debug(f"实际-{result}")
             logger.debug(f"预期-{check}")
 
             self.status.status(
+                num=num,
                 number=number,
                 res=res,
                 response_time=response_time,
@@ -391,8 +376,10 @@ class RunApi:
                 res_json=res_json,
                 check=check,
                 result=result,
+                files=files
             )
             CASE_STATUS[random_key] = copy.deepcopy(self.status.case_status)
+            CASE_STATUS_LIST[random_key].append(copy.deepcopy(self.status.case_status))
 
             if CASE_STATUS[random_key]['stop']:
                 CASE_STATUS[random_key]['run'] = False
