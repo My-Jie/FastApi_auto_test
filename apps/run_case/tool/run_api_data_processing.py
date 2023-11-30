@@ -52,7 +52,7 @@ class DataProcessing:
         :return:
         """
         url = await self._url(
-            old_str=f"{temp_data.host}{temp_data.path}",
+            old_str=f"{temp_data.host}{case_data.path}",
             response=response,
             response_headers=response_headers,
             customize=customize
