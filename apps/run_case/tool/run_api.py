@@ -73,10 +73,10 @@ class RunApi:
 
         # 数据收集
         api_detail_list = []  # 接口详情
-        CASE_RESPONSE[case_id] = []  # 存放接口返回的数据
+        CASE_RESPONSE[case_id] = []  # 存放接口返回的数据，用作查看jsonpath引用追踪
         report = ApiReport(total_api=len(temp_data))  # 接口测试报告
         self.status = CaseStatus(case_id=case_id, total=len(temp_data))  # 接口的实时状态
-        CASE_STATUS_LIST[random_key] = []  #
+        CASE_STATUS_LIST[random_key] = []  # 用于实时数据
 
         all_is_fail = False  # 总体的接口结果
         for num in range(len(temp_data)):
@@ -285,6 +285,22 @@ class RunApi:
                     "is_fail": 'skip',
                 } for k, v in check.items()]
                 check['status_code'] = status_code
+
+                # 因为这里校验了状态码，所以后面的内容都不用校验了，但需要添加上测试接口状态
+                self.set_status(
+                    num=num,
+                    number=number,
+                    status_code=res.status,
+                    response_time=response_time,
+                    is_fail=is_fail,
+                    config=config,
+                    request_info=request_info,
+                    res_json=res_json,
+                    check=check,
+                    result=result,
+                    files=files,
+                    random_key=random_key
+                )
                 break
 
             del check['status_code']
@@ -330,10 +346,10 @@ class RunApi:
             logger.debug(f"实际-{result}")
             logger.debug(f"预期-{check}")
 
-            self.status.status(
+            self.set_status(
                 num=num,
                 number=number,
-                res=res,
+                status_code=res.status,
                 response_time=response_time,
                 is_fail=is_fail,
                 config=config,
@@ -342,10 +358,8 @@ class RunApi:
                 check=check,
                 result=result,
                 files=files,
-                stop=CASE_STATUS.get(random_key, {}).get('stop', False)
+                random_key=random_key
             )
-            CASE_STATUS[random_key] = copy.deepcopy(self.status.case_status)
-            CASE_STATUS_LIST[random_key].append(copy.deepcopy(self.status.case_status))
 
             if CASE_STATUS[random_key]['stop']:
                 CASE_STATUS[random_key]['run'] = False
@@ -367,6 +381,38 @@ class RunApi:
             num += 1
 
         return res, polling_fail, response_time, result, res_json
+
+    def set_status(
+            self,
+            num,
+            number,
+            status_code,
+            response_time,
+            is_fail,
+            config,
+            request_info,
+            res_json,
+            check,
+            result,
+            files,
+            random_key
+    ):
+        self.status.status(
+            num=num,
+            number=number,
+            status_code=status_code,
+            response_time=response_time,
+            is_fail=is_fail,
+            config=config,
+            request_info=request_info,
+            res_json=res_json,
+            check=check,
+            result=result,
+            files=files,
+            stop=CASE_STATUS.get(random_key, {}).get('stop', False)
+        )
+        CASE_STATUS[random_key] = copy.deepcopy(self.status.case_status)
+        CASE_STATUS_LIST[random_key].append(copy.deepcopy(self.status.case_status))
 
     @staticmethod
     async def _sql_data(sql: str, db_config: dict):

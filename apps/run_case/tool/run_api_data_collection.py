@@ -34,7 +34,7 @@ def api_detail(
         'status': 'pass' if not is_fail else 'fail',
         'method': temp_data.method,
         'host': temp_data.host,
-        'path': temp_data.path,
+        'path': case_data.path,
         'run_time': response_time,
         'request_info': request_info,
         'response_info': {
@@ -114,7 +114,7 @@ class CaseStatus:
             self,
             num: int,
             number: int,
-            res,
+            status_code: int,
             response_time: float,
             is_fail: bool,
             config: dict,
@@ -128,7 +128,7 @@ class CaseStatus:
         self.case_status['number'] = number
         self.case_status['time'] = int(time.time() * 1000)
         self.case_status['time_str'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-        self.case_status['status_code'] = res.status
+        self.case_status['status_code'] = status_code
         self.case_status['run_time'] = response_time
         self.case_status['is_fail'] = is_fail
         self.case_status['is_login'] = config['is_login']
