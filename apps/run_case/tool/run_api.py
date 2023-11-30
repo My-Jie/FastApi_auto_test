@@ -222,7 +222,10 @@ class RunApi:
         if CASE_STATUS_LIST.get(random_key):
             CASE_STATUS_LIST[random_key][-1]['run'] = False
 
-        asyncio.create_task(self._del_case_status(random_key))  # 延时删除
+        # 增加一个延时删除的机制，避免实时查看用例的数据存在太久
+        asyncio.create_task(self._del_case_status_list(random_key))
+
+        asyncio.create_task(self._del_case_status(random_key))  # 延时删除运行状态
         await write_api_report(db=db, api_report=report.api_report, api_detail=api_detail_list)  # 存报告
 
         case_info = await service_crud.get_case_info(db=db, case_id=case_id)
@@ -438,8 +441,20 @@ class RunApi:
         """
         await asyncio.sleep(5)
         if CASE_STATUS.get(random_key):
-            logger.info(f"延迟删除:{random_key},成功")
+            logger.info(f"延迟删除运行状态:{random_key},成功")
             del CASE_STATUS[random_key]
+
+    @staticmethod
+    async def _del_case_status_list(random_key):
+        """
+        延迟删除用例实时查看数据
+        :param random_key:
+        :return:
+        """
+        await asyncio.sleep(600)
+        if CASE_STATUS_LIST.get(random_key):
+            logger.info(f"延迟删除实时查看:{random_key},成功")
+            del CASE_STATUS_LIST[random_key]
 
     @staticmethod
     async def _check_count(check: dict):
