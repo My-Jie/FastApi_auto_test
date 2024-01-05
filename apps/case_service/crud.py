@@ -7,6 +7,7 @@
 @Time: 2022/8/20-21:59
 """
 
+import datetime
 from tools import rep_value, rep_url
 from sqlalchemy import func
 from sqlalchemy.orm.attributes import flag_modified
@@ -429,11 +430,12 @@ async def get_case_numbers(db: Session, case_id: int, number: int):
     ).all()
 
 
-async def get_count(db: Session, case_name: str = None):
+async def get_count(db: Session, case_name: str = None, today: bool = None):
     """
     记数查询
     :param db:
     :param case_name:
+    :param today:
     :return:
     """
     if case_name:
@@ -441,4 +443,65 @@ async def get_count(db: Session, case_name: str = None):
             models.TestCase.case_name.like(f"%{case_name}%")
         ).scalar()
 
+    if today:
+        return db.query(func.count(models.TestCase.id)).filter(
+            models.TestCase.created_at >= datetime.datetime.now().date()
+        ).scalar()
+
     return db.query(func.count(models.TestCase.id)).scalar()
+
+
+async def get_api_count(db: Session, today: bool = None):
+    """
+    记数查询
+    :param db:
+    :param today:
+    :return:
+    """
+    if today:
+        return db.query(func.count(models.TestCaseData.id)).filter(
+            models.TestCaseData.created_at >= datetime.datetime.now().date()
+        ).scalar()
+
+    return db.query(func.count(models.TestCaseData.id)).scalar()
+
+
+async def get_case_detail(db: Session, detail_id: int, ):
+    """
+    查询模板数据
+    :param db:
+    :param detail_id:
+    :return:
+    """
+    return db.query(models.TestCaseData).filter(
+        models.TestCaseData.id == detail_id,
+    ).first()
+
+
+async def update_case_path(db: Session, detail_id: int, new_path: str):
+    """
+    更新用例path
+    :param db:
+    :param detail_id:
+    :param new_path:
+    :return:
+    """
+    db_temp = db.query(models.TestCaseData).filter(
+        models.TestCaseData.id == detail_id,
+    ).first()
+    if db_temp:
+        db_temp.path = new_path
+        db.commit()
+        db.refresh(db_temp)
+        return db_temp
+
+
+async def get_case_info_to_number(
+        db: Session,
+        case_id: int,
+        numbers: (tuple, list),
+):
+    return db.query(models.TestCaseData).filter(
+        models.TestCaseData.case_id == case_id,
+        models.TestCaseData.number.in_(numbers)
+    ).all()

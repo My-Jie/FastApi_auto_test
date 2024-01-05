@@ -43,3 +43,23 @@ async def report_detail(
         db: Session = Depends(get_db)
 ):
     return await crud.get_api_detail(db=db, report_id=report_id, page=page, size=size)
+
+
+@api_report.delete(
+    '/del/report/{case_id}',
+    name='删除用例的报告',
+)
+async def del_report(
+        case_id: int,
+        db: Session = Depends(get_db)
+):
+    report_id = await crud.get_api_list(db=db, case_id=case_id)
+    if not report_id:
+        return
+
+    # 删除报告列表
+    for i in report_id:
+        await crud.delete_api_report(db=db, report_id=i.id)
+        await crud.delete_api_detail(db=db, report_id=i.id)
+    else:
+        db.commit()

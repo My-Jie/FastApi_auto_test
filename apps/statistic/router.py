@@ -17,6 +17,7 @@ from apps.template import crud as temp_crud
 from apps.case_service import crud as case_crud
 from apps.case_ddt import crud as ddt_crud
 from apps.case_ui import crud as ui_crud
+from apps.api_report import crud as report_crud
 
 statistic = APIRouter()
 
@@ -132,4 +133,21 @@ async def get_all_statistic(db: Session = Depends(get_db)):
         'ddt_count': await ddt_crud.get_count(db=db),
         'ui_count': await ui_crud.get_count(db=db),
         'p_ddt_count': await ui_crud.get_ddt_count(db=db),
+    }
+
+
+@statistic.get(
+    '/get/case/count',
+    name='获取模板数据'
+)
+async def get_case_count(db: Session = Depends(get_db)):
+    return {
+        'case_count': await case_crud.get_count(db=db),
+        'case_today': await case_crud.get_count(db=db, today=True),
+        'api_count': await case_crud.get_api_count(db=db),
+        'api_today': await case_crud.get_api_count(db=db, today=True),
+        'run_count': await report_crud.get_report_count(db),
+        'run_today': await report_crud.get_report_count(db, today=True),
+        'ddt_count': await ddt_crud.get_count(db=db),
+        'ddt_today': await ddt_crud.get_count(db=db, today=True),
     }

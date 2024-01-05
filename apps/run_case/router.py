@@ -67,13 +67,13 @@ async def run_case_name(ids: schemas.RunCase, db: Session = Depends(get_db)):
     name='按模板Id执行',
     description='按模板ID查询出关联的用例，再异步执行所有用例，收集结果集'
 )
-async def run_case_name(temp_ids: List[int], db: Session = Depends(get_db)):
-    case_list = [await case_crud.get_case_ids(db=db, temp_id=x) for x in temp_ids]
+async def run_case_name(ids: schemas.RunTemp, db: Session = Depends(get_db)):
+    case_list = [await case_crud.get_case_ids(db=db, temp_id=x) for x in ids.temp_ids]
 
     all_case_list = []
     temp_info = {}
     for x in range(len(case_list)):
-        temp_info[temp_ids[x]] = [i[0] for i in case_list[x]]
+        temp_info[ids.temp_ids[x]] = [i[0] for i in case_list[x]]
         for y in case_list[x]:
             all_case_list.append(y[0])
 

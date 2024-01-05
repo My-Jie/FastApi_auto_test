@@ -7,6 +7,7 @@
 @Time: 2023/10/24-21:38
 """
 
+import datetime
 from typing import List
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -18,7 +19,6 @@ async def create_api_list(db: Session, data: schemas.ApiReportListInt):
     创建测试报告列表
     :param db:
     :param data:
-    :param case_id:
     :return:
     """
     db_data = models.ApiReportList(**data.dict())
@@ -85,3 +85,36 @@ async def get_api_detail(db: Session, report_id: int, page: int = 1, size: int =
     return db.query(models.ApiReportDetail).filter(
         models.ApiReportDetail.report_id == report_id
     ).offset(size * (page - 1)).limit(size).all()
+
+
+async def delete_api_report(db: Session, report_id: int):
+    """
+    删除测试用例报告
+    :param db:
+    :param report_id:
+    :return:
+    """
+    db.query(models.ApiReportList).filter(
+        models.ApiReportList.id == report_id
+    ).delete()
+
+
+async def delete_api_detail(db: Session, report_id: int):
+    """
+    删除报告详情
+    :param db:
+    :param report_id: 
+    :return:
+    """
+    db.query(models.ApiReportDetail).filter(
+        models.ApiReportDetail.report_id == report_id
+    ).delete()
+
+
+async def get_report_count(db: Session, today: bool = False):
+    if today:
+        return db.query(func.count(models.ApiReportList.id)).filter(
+            models.ApiReportList.created_at >= datetime.datetime.now().date()
+        ).scalar()
+
+    return db.query(func.count(models.ApiReportList.id)).scalar()

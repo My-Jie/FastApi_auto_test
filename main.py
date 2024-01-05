@@ -33,7 +33,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     include_in_=True,
-    title='随便测测'
+    title='anyTest'
 )
 
 
@@ -78,4 +78,4 @@ load_allure_reports(app=app, allure_dir=setting['allure_path'])
 load_allure_reports(app=app, allure_dir=setting['allure_path_ui'], ui=True)
 
 if __name__ == '__main__':
-    uvicorn.run('main:app', host='0.0.0.0', port=8000, reload=False)
+    uvicorn.run('main:app', host='0.0.0.0', port=8000, reload=True)

@@ -15,7 +15,8 @@ class GetCaseDataInfo:
     获取测试数据
     """
 
-    async def service(self, temp_info: tuple, case_info: tuple, case_data_info: tuple):
+    @staticmethod
+    async def service(temp_info: tuple, case_info: tuple, case_data_info: tuple):
         """
         业务流程测试用例
         :param temp_info:
@@ -36,7 +37,8 @@ class GetCaseDataInfo:
                 'file': data.file,
                 'check': data.check,
                 'description': data.description,
-                'config': data.config
+                'config': data.config,
+                'id': data.id
             }
             new_case_data.append(case_data)
 

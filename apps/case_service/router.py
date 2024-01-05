@@ -10,7 +10,7 @@
 import os
 import json
 import time
-import shutil
+import re
 from typing import List, Any
 from fastapi import APIRouter, UploadFile, Depends, Query
 from sqlalchemy.orm import Session
@@ -21,12 +21,13 @@ from apps import response_code
 from tools.check_case_json import CheckJson
 from tools import OperationJson, ExtractParamsPath, RepData, filter_number
 from tools.read_setting import setting
-from .tool import GetCaseDataInfo, check, js_count
+from .tool import GetCaseDataInfo, check, js_count, aim
 
 from apps.whole_conf import crud as conf_crud
 from apps.template import crud as temp_crud
 from apps.case_service import crud, schemas
 from apps.case_ddt import crud as ddt_crud
+from apps.api_report import crud as report_crud
 from apps.case_service.tool import insert, cover_insert
 from apps.template.tool import GenerateCase
 from apps.run_case import CASE_RESPONSE
@@ -281,6 +282,7 @@ async def case_data_list(
     for case in test_case:
         temp_info = await temp_crud.get_temp_name(db=db, temp_id=case.temp_id)
         project_code = await conf_crud.get_project_code(db=db, id_=temp_info[0].project_name)
+        report = await report_crud.get_api_list(db=db, case_id=case.id)
         case_info.append(
             {
                 "name": f"{project_code}-{temp_info[0].temp_name}-{case.case_name}",
@@ -292,7 +294,9 @@ async def case_data_list(
                 "success": case.success,
                 "fail": case.fail,
                 "mode": case.mode,
-                "created_at": case.created_at
+                "report": report[0].updated_at if report else '1970-01-01 00:00:00',
+                "created_at": case.created_at,
+                "updated_at": case.updated_at
             } if outline is False else {
                 "name": f"{project_code}-{temp_info[0].temp_name}-{case.case_name}",
                 "case_name": f"{case.case_name}",
@@ -317,7 +321,7 @@ async def del_case(case_id: int, db: Session = Depends(get_db)):
         return await response_code.resp_400()
     await crud.del_case_data(db=db, case_id=case_id)
     await ddt_crud.del_test_gather(db=db, case_id=case_id)
-    shutil.rmtree(f"{setting['allure_path']}/{case_id}", ignore_errors=True)
+
     return await response_code.resp_200(message=f'用例{case_id}删除成功')
 
 
@@ -558,6 +562,8 @@ async def set_params_data(spd: schemas.SedParamsData, db: Session = Depends(get_
         await crud.set_case_info(db=db, case_id=spd.case_id, number=spd.number, params=spd.data_info)
     elif spd.type.lower() == 'data':
         await crud.set_case_info(db=db, case_id=spd.case_id, number=spd.number, data=spd.data_info)
+    elif spd.type.lower() == 'headers':
+        await crud.set_case_info(db=db, case_id=spd.case_id, number=spd.number, headers=spd.data_info)
     else:
         return await response_code.resp_400()
     return await response_code.resp_200()
@@ -809,7 +815,7 @@ async def get_response(case_id: int, number: int, type_: str, db: Session = Depe
     '/get/jsonpath',
     name='获取用例中jsonpath的引用关系'
 )
-async def get_jsonpath(case_id: int, db: Session = Depends(get_db)):
+async def get_jsonpath(case_id: int, jsonpath_name: str = None, db: Session = Depends(get_db)):
     case_info = await crud.get_case_info(db=db, case_id=case_id)
     if not case_info:
         return case_info
@@ -825,4 +831,51 @@ async def get_jsonpath(case_id: int, db: Session = Depends(get_db)):
         get_temp_value=True
     )
 
+    # 查询单个jsonpath的追踪详情
+    if jsonpath_name is not None:
+        for json_str in data_count:
+            if json_str['jsonpath'] == jsonpath_name:
+                start_number = json_str['jsonpath'].split('.')[0].replace('{{', '')
+                return {
+                    'source': 'headers' if '$h' in json_str['jsonpath'] else 'response',
+                    'start_number': start_number,
+                    'query_info': json_str,
+                    'jsonpath_list': await aim(db=db, case_id=case_id, json_str=json_str)
+                }
+        else:
+            return await response_code.resp_400(message='没有找到这个jsonpath')
+
     return data_count
+
+
+@case_service.get(
+    '/detail/api/{detail_id}',
+    name='模板api详情',
+    response_model=schemas.TestCaseDataOut2
+)
+async def detail_api(detail_id: int, db: Session = Depends(get_db)):
+    """
+    查询用例api详情
+    """
+    case_detail = await crud.get_case_detail(db=db, detail_id=detail_id)
+    if not case_detail:
+        return await response_code.resp_400(message='没有获取到这个用例api详情数据')
+    return case_detail
+
+
+@case_service.put(
+    '/detail/api/path',
+    name='修改api路径'
+)
+async def update_api_path(
+        detail_id: int,
+        new_path: str,
+        db: Session = Depends(get_db)
+):
+    """
+    修改api路径
+    """
+    if not new_path:
+        return await response_code.resp_400(message='路径不能为空')
+
+    return await crud.update_case_path(db=db, detail_id=detail_id, new_path=new_path)

@@ -11,6 +11,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from apps.template import models, schemas
 from apps.case_service import models as case_models
+from apps.api_report import models as report_models
 
 
 async def create_template(db: Session, temp_name: str, project_name: int):
@@ -151,7 +152,20 @@ async def get_temp_case_info(db: Session, temp_id: int, outline: bool):
     case_info = []
     for case in db_case:
         if outline is False:
-            case_info.append({'id': case.id, 'mode': case.mode, 'name': case.case_name, 'run_num': case.run_order})
+            report = db.query(report_models.ApiReportList).filter(
+                report_models.ApiReportList.case_id == case.id,
+            ).order_by(
+                report_models.ApiReportList.id.desc()
+            ).first()
+            case_info.append({
+                'id': case.id,
+                'mode': case.mode,
+                'name': case.case_name,
+                'run_num': case.run_order,
+                'success': case.success,
+                'fail': case.fail,
+                'created_at': report.created_at if report else '1970-01-01 00:00:00',
+            })
         else:
             case_info.append({'id': case.id, 'name': case.case_name})
 
@@ -188,6 +202,18 @@ async def get_template_data(db: Session, temp_name: str = None, temp_id: int = N
         ).all()
 
 
+async def get_tempdata_detail(db: Session, detail_id: int, ):
+    """
+    查询模板数据
+    :param db:
+    :param detail_id:
+    :return:
+    """
+    return db.query(models.TemplateData).filter(
+        models.TemplateData.id == detail_id,
+    ).first()
+
+
 async def get_temp_host(db: Session, temp_id: int):
     """
     查询模板数据
@@ -219,6 +245,22 @@ async def put_temp_name(db: Session, new_name: str, temp_id: int = None, old_nam
 
     if db_temp:
         db_temp.temp_name = new_name
+        db.commit()
+        db.refresh(db_temp)
+        return db_temp
+
+
+async def put_description(db: Session, new_description: str, api_id: int):
+    """
+    更新模板描述
+    :param db:
+    :param new_description:
+    :param api_id:
+    :return:
+    """
+    db_temp = db.query(models.TemplateData).filter(models.TemplateData.id == api_id).first()
+    if db_temp:
+        db_temp.description = new_description
         db.commit()
         db.refresh(db_temp)
         return db_temp
@@ -358,6 +400,7 @@ async def get_count(db: Session, temp_name: str = None):
     """
     记数查询
     :param db:
+    :param temp_name:
     :return:
     """
     if temp_name:

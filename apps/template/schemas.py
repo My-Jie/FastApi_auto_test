@@ -46,6 +46,9 @@ class TestCase(BaseModel):
     mode: str = None
     name: str
     run_num: int = None
+    success: int = None
+    fail: int = None
+    created_at: datetime = None
 
     class Config:
         orm_mode = True
@@ -117,6 +120,11 @@ class SwapDataMany(BaseModel):
 class UpdateName(BaseModel):
     new_name: str
     temp_id: int = None
+
+
+class UpdateDescription(BaseModel):
+    description: str = None
+    id: int = None
 
 
 class PaginationTempTestCase(BaseModel):

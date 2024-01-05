@@ -26,6 +26,10 @@ class RunCase(BaseModel):
     setting_list_id: str = ''
 
 
+class RunTemp(BaseModel):
+    temp_ids: List[int]
+
+
 class RunCaseGather(BaseModel):
     case_id: int
     suite: List[int]

@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from depends import get_db
 from apps.whole_conf import crud, schemas
 from apps import response_code
-from .tool import check
+from .tool import check, jsonpath_tips
 
 conf = APIRouter()
 
@@ -185,7 +185,8 @@ async def add_unify(conf_unify_res: schemas.ConfUnifyResIn, db: Session = Depend
     try:
         check(enum=conf_unify_res)
     except TypeError:
-        return await response_code.resp_400(message=f"type: {conf_unify_res.type}和value: {conf_unify_res.value} 的类型不对应")
+        return await response_code.resp_400(
+            message=f"type: {conf_unify_res.type}和value: {conf_unify_res.value} 的类型不对应")
 
     return await crud.create_unify_res(db=db, conf_unify_res=conf_unify_res)
 
@@ -210,7 +211,8 @@ async def update_unify(unify_res_id: int, conf_unify_res: schemas.ConfUnifyResIn
     try:
         check(enum=conf_unify_res)
     except TypeError:
-        return await response_code.resp_400(message=f"type: {conf_unify_res.type}和value: {conf_unify_res.value} 的类型不对应")
+        return await response_code.resp_400(
+            message=f"type: {conf_unify_res.type}和value: {conf_unify_res.value} 的类型不对应")
 
     await crud.update_unify_res(db=db, id_=unify_res_id, conf_unify_res=conf_unify_res)
     return await response_code.resp_200()
@@ -245,7 +247,8 @@ async def add_customize(conf_customize: schemas.ConfCustomizeIn, db: Session = D
     try:
         check(enum=conf_customize)
     except TypeError:
-        return await response_code.resp_400(message=f"type: {conf_customize.type}和value: {conf_customize.value} 的类型不对应")
+        return await response_code.resp_400(
+            message=f"type: {conf_customize.type}和value: {conf_customize.value} 的类型不对应")
     return await crud.create_customize(db=db, conf_customize=conf_customize)
 
 
@@ -269,7 +272,8 @@ async def update_customize(customize_id: int, conf_customize: schemas.ConfCustom
     try:
         check(enum=conf_customize)
     except TypeError:
-        return await response_code.resp_400(message=f"type: {conf_customize.type}和value: {conf_customize.value} 的类型不对应")
+        return await response_code.resp_400(
+            message=f"type: {conf_customize.type}和value: {conf_customize.value} 的类型不对应")
 
     await crud.update_customize(db=db, id_=customize_id, conf_customize=conf_customize)
     return await response_code.resp_200()
@@ -285,3 +289,11 @@ async def del_customize(customize_id: int, db: Session = Depends(get_db)):
 
     await crud.del_customize(db=db, id_=customize_id)
     return await response_code.resp_200()
+
+
+@conf.get(
+    '/jsonpath/tips',
+    name='表达式提示'
+)
+async def get_jsonpath_tips():
+    return await response_code.resp_200(data=jsonpath_tips.JSONPATH_TIPS)

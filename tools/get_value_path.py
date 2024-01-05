@@ -148,8 +148,8 @@ class ExtractParamsPath:
 
             path_list += value_path_list
         if type_ == schemas.RepType.response or type_ == schemas.RepType.response_headers:
-            return {'extract_contents': path_list[:5]}
-        return {'extract_contents': path_list}
+            return {'extract_contents': path_list[:100]}
+        return {'extract_contents': path_list[:100]}
 
     @classmethod
     def _out_function(cls, extract_contents: Any, data: dict, ext_type: schemas.ExtType) -> list:

@@ -10,6 +10,7 @@
 import os
 import time
 import json
+import binascii
 from typing import List, Any
 from pydantic import HttpUrl
 from fastapi import APIRouter, UploadFile, Depends, Form, File, Query
@@ -65,10 +66,13 @@ async def upload_file_har(
         return await response_code.resp_400(message='项目编码不匹配或未创建项目')
 
     # 解析数据，拿到解析结果
-    temp_info = await ParseData.pares_data(
-        har_data=file.file.read(),
-        har_type=har_type
-    )
+    try:
+        temp_info = await ParseData.pares_data(
+            har_data=file.file.read(),
+            har_type=har_type
+        )
+    except binascii.Error as e:
+        return await response_code.resp_400(message=f'解析数据失败，请检查数据类型')
 
     # 创建主表数据
     db_template = await crud.create_template(db=db, temp_name=temp_name, project_name=project_name)
@@ -159,7 +163,9 @@ async def upload_curl(
         data = curl_to_request_kwargs(curl_command=curl_command.curl_command)
         return data
     except IndexError:
-        return response_code.resp_400(message='数据格式错误')
+        return await response_code.resp_400(message='数据格式错误')
+    except ValueError:
+        return await response_code.resp_400(message='数据无效')
 
 
 @template.put(
@@ -445,6 +451,22 @@ async def update_name(un: schemas.UpdateName, db: Session = Depends(get_db)):
     ) or await response_code.resp_400()
 
 
+@template.put(
+    '/description/edit',
+    response_model=schemas.TemplateDataOut,
+    name='修改接口描述'
+)
+async def update_description(ud: schemas.UpdateDescription, db: Session = Depends(get_db)):
+    """
+    修改接口描述
+    """
+    return await crud.put_description(
+        db=db,
+        new_description=ud.description,
+        api_id=ud.id
+    ) or await response_code.resp_400()
+
+
 @template.get(
     '/data/list',
     response_model=List[schemas.TemplateDataOut],
@@ -458,10 +480,35 @@ async def get_template_data(temp_name: str = None, temp_id: int = None, db: Sess
     按模板名称查询接口原始数据，不返回['headers', 'file_data']
     """
     if temp_name:
-        return await crud.get_template_data(db=db, temp_name=temp_name)
+        temp_info = await crud.get_template_data(db=db, temp_name=temp_name)
+    else:
+        temp_info = await crud.get_template_data(db=db, temp_id=temp_id)
 
-    if temp_id:
-        return await crud.get_template_data(db=db, temp_id=temp_id)
+    temp_list = []
+    for temp in temp_info:
+        temp_list.append(
+            {
+                'id': temp.id,
+                'temp_id': temp.temp_id,
+                'number': temp.number,
+                'host': temp.host,
+                'path': temp.path,
+                'code': temp.code,
+                'method': temp.method,
+                'params': {'is_none': False} if temp.params else temp.params,
+                'json_body': temp.json_body,
+                'data': {'is_none': False} if temp.data else temp.data,
+                'file': temp.file,
+                'file_data': temp.file_data,
+                'headers': {'is_none': False} if temp.headers else temp.headers,
+                'response': {'is_none': False} if temp.response else temp.response,
+                'response_headers': {'is_none': False} if temp.response_headers else temp.response_headers,
+                'description': temp.description,
+                'created_at': temp.created_at,
+                'updated_at': temp.updated_at,
+            }
+        )
+    return temp_list
 
 
 @template.get(
@@ -618,6 +665,21 @@ async def edit_api(api_info: schemas.TemplateDataInTwo, db: Session = Depends(ge
         return await response_code.resp_200()
     else:
         return await response_code.resp_400(message='修改失败，未获取到内容')
+
+
+@template.get(
+    '/detail/api/{detail_id}',
+    name='模板api详情',
+    response_model=schemas.TemplateDataOut
+)
+async def detail_api(detail_id: int, db: Session = Depends(get_db)):
+    """
+    查询模板api详情
+    """
+    temp_detail = await crud.get_tempdata_detail(db=db, detail_id=detail_id)
+    if not temp_detail:
+        return await response_code.resp_400(message='没有获取到这个模板api详情数据')
+    return temp_detail
 
 
 @template.delete(

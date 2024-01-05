@@ -105,13 +105,15 @@ async def send_api(db: Session, api_info: schemas.TemplateDataInTwo, get_cookie:
         except (client_exceptions.ContentTypeError, client_exceptions.ClientConnectorError,):
             res_data = {}
         except Exception as e:
-            res_data = f"{str(e)}"
+            res_data = {'error': f"{str(e)}"}
 
         cookie = await cookie_info(rep_type='aiohttp', response=res) if get_cookie else case_header.get('Cookie', '')
 
         res_info = {
-            'status': res.status,
-            'path': url,
+            'host': api_info.host,
+            'method': api_info.method,
+            'code': res.status,
+            'path': api_info.path,
             'params': params,
             'data': data,
             'request_headers': case_header,

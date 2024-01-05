@@ -40,7 +40,7 @@ class ExtType(str, Enum):
 class SetApiDescription(BaseModel):
     case_id: int
     number: int
-    description: str
+    description: str = None
 
 
 class CheckInfo(BaseModel):
@@ -171,6 +171,7 @@ class TestCaseDataOut1(BaseModel):
 
 
 class TestCaseDataOut2(TestCaseDataOut1):
+    id: int
     created_at: datetime
     updated_at: datetime
 
@@ -188,7 +189,9 @@ class TestCaseInfoOut(BaseModel):
     success: int = None
     fail: int = None
     mode: str = None
+    report: datetime = None
     created_at: datetime = None
+    updated_at: datetime = None
 
 
 class SwapOne(BaseModel):

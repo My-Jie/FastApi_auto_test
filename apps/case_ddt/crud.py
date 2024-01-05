@@ -7,6 +7,7 @@
 @Time: 2022/8/22-9:50
 """
 
+import datetime
 from typing import List
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -82,10 +83,16 @@ async def get_all(db: Session):
     return db.query(models.TestGather).all()
 
 
-async def get_count(db: Session):
+async def get_count(db: Session, today: bool = None):
     """
     记数查询
     :param db:
+    :param today:
     :return:
     """
+    if today:
+        return db.query(func.count(models.TestGather.suite.distinct())).filter(
+            models.TestGather.created_at >= datetime.datetime.now().date()
+        ).scalar()
+
     return db.query(func.count(models.TestGather.suite.distinct())).scalar()
