@@ -138,7 +138,7 @@ async def get_all_statistic(db: Session = Depends(get_db)):
 
 @statistic.get(
     '/get/case/count',
-    name='获取模板数据'
+    name='获取用例统计数据'
 )
 async def get_case_count(db: Session = Depends(get_db)):
     return {
@@ -150,4 +150,19 @@ async def get_case_count(db: Session = Depends(get_db)):
         'run_today': await report_crud.get_report_count(db, today=True),
         'ddt_count': await ddt_crud.get_count(db=db),
         'ddt_today': await ddt_crud.get_count(db=db, today=True),
+    }
+
+
+@statistic.get(
+    '/get/temp/count',
+    name='获取模板统计数据'
+)
+async def get_temp_count(db: Session = Depends(get_db)):
+    return {
+        'temp_count': await temp_crud.get_count(db=db),
+        'temp_today': await temp_crud.get_count(db=db, today=True),
+        'api_count': await temp_crud.get_api_count(db=db),
+        'api_today': await temp_crud.get_api_count(db=db, today=True),
+        'case_count': await case_crud.get_count(db=db),
+        'case_today': await case_crud.get_count(db=db, today=True),
     }

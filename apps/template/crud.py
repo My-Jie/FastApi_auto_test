@@ -7,6 +7,7 @@
 @Time: 2022/8/8-10:19
 """
 
+import datetime
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from apps.template import models, schemas
@@ -396,11 +397,12 @@ async def get_temp_numbers(db: Session, temp_id: int, number: int):
     ).all()
 
 
-async def get_count(db: Session, temp_name: str = None):
+async def get_count(db: Session, temp_name: str = None, today: bool = None):
     """
     记数查询
     :param db:
     :param temp_name:
+    :param today:
     :return:
     """
     if temp_name:
@@ -408,4 +410,24 @@ async def get_count(db: Session, temp_name: str = None):
             models.Template.temp_name.like(f"%{temp_name}%")
         ).scalar()
 
+    if today:
+        return db.query(func.count(models.Template.id)).filter(
+            models.Template.created_at >= datetime.datetime.now().date()
+        ).scalar()
+
     return db.query(func.count(models.Template.id)).scalar()
+
+
+async def get_api_count(db: Session, today: bool = None):
+    """
+    记数查询
+    :param db:
+    :param today:
+    :return:
+    """
+    if today:
+        return db.query(func.count(models.TemplateData.id)).filter(
+            models.TemplateData.created_at >= datetime.datetime.now().date()
+        ).scalar()
+
+    return db.query(func.count(models.TemplateData.id)).scalar()
