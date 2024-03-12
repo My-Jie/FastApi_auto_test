@@ -4,7 +4,7 @@
 [![Vue](https://img.shields.io/badge/Vue-v3.2-red.svg)]()
 [![Element_Plus](https://img.shields.io/badge/Element_Plus-v2.3.7-red.svg)]()
 
-# 随便测测平台
+# anyTest平台
 
 **随心、随意、随景**
 
@@ -54,7 +54,7 @@
 >
 >无需记录变量值，抠破脑袋的想变量名；无需为参数应用于哪些接口而发愁；一切交给程序自动处理，只需要告诉它：你想替换什么
 
-[随便测测-做接口测试](https://blog.csdn.net/yangj507/article/details/131395093)
+[anyTest-做接口测试](https://blog.csdn.net/yangj507/article/details/131395093)
 
 ## ui测试用例流程
 
@@ -81,7 +81,7 @@
 >
 >你甚至可以只打印 hello world 而不做任何事
 
-[随便测测-做UI测试](https://blog.csdn.net/yangj507/article/details/131579327)
+[anyTest-做UI测试](https://blog.csdn.net/yangj507/article/details/131579327)
 
 ## v3.0 全新的前端页面布局(待完善功能)
 
