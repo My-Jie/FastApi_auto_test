@@ -12,55 +12,59 @@ JSONPATH_TIPS = {
     'faker': [
         {
             'label': '身份证',
-            'value': '{{ssn}}',
+            'value': '{ssn}',
+        },
+        {
+            'label': '名称',
+            'value': '{name}',
         },
         {
             'label': '电话',
-            'value': '{{phone_number}}',
+            'value': '{phone_number}',
         },
         {
             'label': '银行卡',
-            'value': '{{credit_card_number}}',
+            'value': '{credit_card_number}',
         },
         {
             'label': '城市',
-            'value': '{{city}}',
+            'value': '{city}',
         },
         {
             'label': '地址',
-            'value': '{{address}}',
+            'value': '{address}',
         },
         {
             'label': '随机数字',
-            'value': '{{random_int.1}} number为长度',
+            'value': '{random_int.1} number为长度',
         },
         {
             'label': '随机小写字母',
-            'value': '{{random_lower.1}} number为长度',
+            'value': '{random_lower.1} number为长度',
         },
         {
             'label': '随机大写字母',
-            'value': '{{random_upper.1}} number为长度',
+            'value': '{random_upper.1} number为长度',
         },
         {
             'label': '随机大小写字母',
-            'value': '{{random_letter.1}} number为长度',
+            'value': '{random_letter.1} number为长度',
         },
         {
             'label': '随机汉字',
-            'value': '{{random_cn.1}} number为长度',
+            'value': '{random_cn.1} number为长度',
         },
         {
             'label': '数字计算',
-            'value': '{{compute}}',
+            'value': '{compute}',
         },
         {
             'label': '时间字符串',
-            'value': '{{time_str.1}} 同时间戳',
+            'value': '{time_str.1} 同时间戳',
         },
         {
             'label': '时间戳',
-            'value': '{{time_int.0}} 0:当前时间, -1:当前时间前一天, 1:当前时间后一天,-2:前一天00:00:00, 2:后一天23:59:59',
+            'value': '{time_int.0} 0:当前时间, -1:当前时间前一天, 1:当前时间后一天,-2:前一天00:00:00, 2:后一天23:59:59',
         },
     ],
     'jsonpath': [

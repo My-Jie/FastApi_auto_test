@@ -18,7 +18,7 @@ class HarType(str, Enum):
     chrome = 'chrome'
 
 
-class curlCommand(BaseModel):
+class CurlCommand(BaseModel):
     curl_command: str
 
 
@@ -132,3 +132,16 @@ class PaginationTempTestCase(BaseModel):
     page: int
     size: int
     items: List[TempTestCase]
+
+
+class SaveApiData(BaseModel):
+    temp_id: int
+    number: int
+    type: str
+    data_info: Union[dict, list]
+
+
+class SaveApiPath(BaseModel):
+    temp_id: int
+    number: int
+    path_info: Union[dict, list]

@@ -30,7 +30,7 @@ def replace_headers(cookies: dict, tmp_header: dict, case_header: dict, tmp_host
             tmp_header['cookie'] = cookies[tmp_host]
 
     # 有附件时，要删除Content-Type
-    if tmp_file:
+    if tmp_file and tmp_header.get('Content-Type'):
         del tmp_header['Content-Type']
 
     # aiohttp 需要删除Content-Length

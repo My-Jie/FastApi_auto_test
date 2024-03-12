@@ -10,6 +10,7 @@
 import datetime
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 from apps.template import models, schemas
 from apps.case_service import models as case_models
 from apps.api_report import models as report_models
@@ -431,3 +432,134 @@ async def get_api_count(db: Session, today: bool = None):
         ).scalar()
 
     return db.query(func.count(models.TemplateData.id)).scalar()
+
+
+async def save_temp_info(
+        db: Session,
+        temp_id: int,
+        number: int,
+        params: dict = None,
+        data: dict = None,
+        headers: dict = None,
+):
+    """
+    更新用例的数据
+    """
+    db_temp = db.query(models.TemplateData).filter(
+        models.TemplateData.temp_id == temp_id,
+        models.TemplateData.number == number,
+    ).first()
+
+    if db_temp:
+        if params is not None:
+            db_temp.params = params
+            flag_modified(db_temp, "params")
+
+        elif data is not None:
+            db_temp.data = data
+            flag_modified(db_temp, "data")
+
+        elif headers is not None:
+            db_temp.headers = headers
+            flag_modified(db_temp, "headers")
+
+        db.commit()
+        db.refresh(db_temp)
+        return db_temp
+
+
+async def save_path_info(db: Session, temp_id: int, number: int, api_path: dict):
+    """
+    更新用例的path
+    """
+    db_temp = db.query(models.TemplateData).filter(
+        models.TemplateData.temp_id == temp_id,
+        models.TemplateData.number == number,
+    ).first()
+
+    if db_temp:
+        db_temp.method = api_path['method']
+        db_temp.path = api_path['path']
+        db_temp.code = api_path['code']
+        db.commit()
+        db.refresh(db_temp)
+        return db_temp
+
+
+async def sync_temp(
+        db: Session,
+        number: int,
+        method: str,
+        path: str,
+        data_type: str,
+        temp_id: int = None,
+):
+    """
+    按method+path查询模板的数据
+    :param db:
+    :param number:
+    :param method:
+    :param path:
+    :param data_type:
+    :param temp_id: 传了temp_id就查询当前模板的数据， 没有传就查询所有
+    :return:
+    """
+    if temp_id:
+        db_temp = db.query(models.TemplateData).filter(
+            models.TemplateData.temp_id == temp_id,
+            models.TemplateData.method == method,
+            models.TemplateData.path == path,
+        ).all()
+    else:
+        db_temp = db.query(models.TemplateData).filter(
+            models.TemplateData.method == method,
+            models.TemplateData.path == path,
+        ).all()
+
+    if data_type == 'params':
+        return [
+            {
+                'temp_id': x.temp_id,
+                'number': x.number,
+                'method': x.method,
+                'path': x.path,
+                'data': x.params,
+                'description': x.description,
+                'active_name': '1',
+            } for x in db_temp if any([
+                x.temp_id == temp_id and x.number != number,
+                x.temp_id != temp_id and x.number == number
+            ])
+        ]
+
+    if data_type == 'data':
+        return [
+            {
+                'temp_id': x.temp_id,
+                'number': x.number,
+                'method': x.method,
+                'path': x.path,
+                'data': x.data,
+                'description': x.description,
+                'active_name': '1',
+            } for x in db_temp if any([
+                x.temp_id == temp_id and x.number != number,
+                x.temp_id != temp_id and x.number == number
+            ])
+        ]
+
+    if data_type == 'headers':
+        return [
+            {
+                'temp_id': x.temp_id,
+                'number': x.number,
+                'method': x.method,
+                'path': x.path,
+                'data': x.headers,
+                'description': x.description,
+                'active_name': '1',
+            } for x in db_temp if any([
+                x.temp_id == temp_id and x.number != number,
+                x.temp_id != temp_id and x.number == number
+            ])
+        ]

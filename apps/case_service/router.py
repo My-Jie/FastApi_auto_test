@@ -329,6 +329,7 @@ async def del_case(case_id: int, db: Session = Depends(get_db)):
     '/query/urls',
     response_model=List[schemas.TestCaseDataOut2],
     response_class=response_code.MyJSONResponse,
+    response_model_exclude_unset=True,
     name='查询url数据'
 )
 async def query_urls(url: str = Query(..., min_length=5), db: Session = Depends(get_db)):
@@ -476,9 +477,9 @@ async def set_api_config(sac: schemas.SetApiConfig, db: Session = Depends(get_db
     if not case_data:
         return await response_code.resp_400(message='没有获取到这个用例配置')
 
-    new_config = {k: v for k, v in sac.config if v is not None and v != []}
+    # new_config = {k: v for k, v in sac.config if v is not None and v != []}
 
-    await crud.set_case_info(db=db, case_id=sac.case_id, number=sac.number, config=new_config)
+    await crud.set_case_info(db=db, case_id=sac.case_id, number=sac.number, config=sac.config)
 
     return await response_code.resp_200()
 
@@ -554,8 +555,7 @@ async def set_params_data(spd: schemas.SedParamsData, db: Session = Depends(get_
     """
     更新用例的params数据或data数据
     """
-    case_data = await crud.get_case_data(db=db, case_id=spd.case_id, number=spd.number)
-    if not case_data:
+    if not await crud.get_case_data(db=db, case_id=spd.case_id, number=spd.number):
         return await response_code.resp_400(message='没有获取到这个用例数据')
 
     if spd.type.lower() == 'params':
@@ -851,7 +851,8 @@ async def get_jsonpath(case_id: int, jsonpath_name: str = None, db: Session = De
 @case_service.get(
     '/detail/api/{detail_id}',
     name='模板api详情',
-    response_model=schemas.TestCaseDataOut2
+    response_model=schemas.TestCaseDataOut2,
+    response_model_exclude_unset=True,
 )
 async def detail_api(detail_id: int, db: Session = Depends(get_db)):
     """

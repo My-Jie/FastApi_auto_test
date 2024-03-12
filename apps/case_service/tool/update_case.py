@@ -104,7 +104,8 @@ async def temp_to_case(db: Session, case_id: int, api_info: temp_schemas.Templat
             'stop': False,
             'code': False,
             'extract': [],
-            'fail_stop': False
+            'fail_stop': False,
+            'skip': False
         }
     }
 

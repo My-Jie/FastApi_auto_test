@@ -18,6 +18,7 @@ from .rep_case_data_value import rep_value, rep_url
 from .my_selenoid import get_session_id
 from .read_setting import setting
 from .faker_data import FakerData
+from .diff_dict import compare_data
 
 
 def mkdir():

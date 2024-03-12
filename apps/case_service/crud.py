@@ -163,7 +163,7 @@ async def set_case_info(
         headers: dict = None,
 ):
     """
-    设置用例的配置项
+    更新用例的数据
     """
     db_temp = db.query(models.TestCaseData).filter(
         models.TestCaseData.case_id == case_id,

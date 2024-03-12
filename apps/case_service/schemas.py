@@ -107,6 +107,7 @@ class TestCaseConfig(BaseModel):
     code: bool = None
     extract: Union[list, None] = []
     fail_stop: bool = None
+    skip: bool = None
 
 
 class TestCaseDataIn(BaseModel):
@@ -208,7 +209,7 @@ class SwapMany(BaseModel):
 class SetApiConfig(BaseModel):
     case_id: int
     number: int
-    config: TestCaseConfig
+    config: dict
 
 
 class UpdateName(BaseModel):

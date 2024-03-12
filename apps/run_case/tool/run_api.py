@@ -105,6 +105,12 @@ class RunApi:
                 cookies=self.cookies
             )
 
+            # 跳过
+            # if config.get('skip'):
+            #     response_data['response'].append({})
+            #     response_data['headers'].append({})
+            #     continue
+
             # 计算check的内容
             await self._check_count(check=check)
 

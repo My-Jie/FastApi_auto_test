@@ -11,6 +11,7 @@ import os
 import time
 import json
 import binascii
+from sqlalchemy import exc
 from typing import List, Any
 from pydantic import HttpUrl
 from fastapi import APIRouter, UploadFile, Depends, Form, File, Query
@@ -30,7 +31,7 @@ from apps.case_service import crud as case_crud
 from apps.template.tool import ParseData, check_num, GenerateCase, InsertTempData, DelTempData, ReadSwagger
 from apps.case_service.tool import refresh, temp_to_case
 from apps.whole_conf import crud as conf_crud
-from tools import CreateExcel, OperationJson
+from tools import CreateExcel, OperationJson, compare_data
 from .tool import send_api, get_jsonpath, del_debug, curl_to_request_kwargs
 
 template = APIRouter()
@@ -157,7 +158,7 @@ async def upload_swagger_json(
     response_class=response_code.MyJSONResponse,
 )
 async def upload_curl(
-        curl_command: schemas.curlCommand
+        curl_command: schemas.CurlCommand
 ):
     try:
         data = curl_to_request_kwargs(curl_command=curl_command.curl_command)
@@ -444,11 +445,14 @@ async def update_name(un: schemas.UpdateName, db: Session = Depends(get_db)):
     """
     修改模板名称
     """
-    return await crud.put_temp_name(
-        db=db,
-        temp_id=un.temp_id,
-        new_name=un.new_name
-    ) or await response_code.resp_400()
+    try:
+        return await crud.put_temp_name(
+            db=db,
+            temp_id=un.temp_id,
+            new_name=un.new_name
+        ) or await response_code.resp_400()
+    except exc.IntegrityError:
+        return await response_code.resp_400(message='模板名称重复')
 
 
 @template.put(
@@ -793,3 +797,94 @@ async def download_temp_excel(temp_id: int, db: Session = Depends(get_db)):
             background=BackgroundTask(lambda: os.remove(path))
         )
     return await response_code.resp_400()
+
+
+@template.put(
+    '/save/api/data',
+    name='保存模板数据'
+)
+async def sync_api_data(sad: schemas.SaveApiData, db: Session = Depends(get_db)):
+    if not await crud.get_temp_name(db=db, temp_id=sad.temp_id):
+        return await response_code.resp_400(message='没有获取到这个模板数据')
+
+    if sad.type.lower() == 'params':
+        await crud.save_temp_info(db=db, temp_id=sad.temp_id, number=sad.number, params=sad.data_info)
+    elif sad.type.lower() == 'data':
+        await crud.save_temp_info(db=db, temp_id=sad.temp_id, number=sad.number, data=sad.data_info)
+    elif sad.type.lower() == 'headers':
+        await crud.save_temp_info(db=db, temp_id=sad.temp_id, number=sad.number, headers=sad.data_info)
+    else:
+        return await response_code.resp_400()
+    return await response_code.resp_200()
+
+
+@template.put(
+    '/save/api/path',
+    name='保存模板的method/path/code'
+)
+async def save_api_path(sad: schemas.SaveApiPath, db: Session = Depends(get_db)):
+    if not await crud.get_temp_name(db=db, temp_id=sad.temp_id):
+        return await response_code.resp_400(message='没有获取到这个模板数据')
+
+    try:
+        await crud.save_path_info(db=db, temp_id=sad.temp_id, number=sad.number, api_path=sad.path_info)
+    except Exception:
+        return await response_code.resp_400(message='保存失败')
+    else:
+        return await response_code.resp_200()
+
+
+@template.put(
+    '/sync/api/data',
+    name='同步模板数据'
+)
+async def sync_api_data(
+        detail_id: int,
+        data_type: str,
+        sync_type: str,
+        db: Session = Depends(get_db)
+):
+    detail_data = await crud.get_tempdata_detail(db=db, detail_id=detail_id)
+    if not detail_data:
+        return await response_code.resp_400(message='没有获取到这个详情数据')
+
+    data_type_dict = {
+        'params': detail_data.params,
+        'data': detail_data.data,
+        'headers': detail_data.headers
+    }
+    now_temp = data_type_dict.get(data_type)
+    if now_temp is False:
+        await response_code.resp_400(message='数据类型错误')
+
+    temp_data = await crud.sync_temp(
+        db=db,
+        number=detail_data.number,
+        method=detail_data.method,
+        path=detail_data.path,
+        data_type=data_type,
+        temp_id=detail_data.temp_id if sync_type == 'temp' else None,
+    )
+
+    for x in temp_data:
+        diff = await compare_data(now_temp, x['data'])
+        if diff['value_changed']:
+            x['active_name'] = '3'
+        if diff['removed']:
+            x['active_name'] = '2'
+        if diff['added']:
+            x['active_name'] = '1'
+        x['diff'] = diff
+
+    return {
+        'now_temp': {
+            'temp_id': detail_data.temp_id,
+            'number': detail_data.number,
+            'method': detail_data.method,
+            'path': detail_data.path,
+            'data': now_temp,
+            'type': data_type,
+            'description': detail_data.description
+        },
+        'old_temp': temp_data
+    }
