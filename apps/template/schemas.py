@@ -145,3 +145,9 @@ class SaveApiPath(BaseModel):
     temp_id: int
     number: int
     path_info: Union[dict, list]
+
+
+class SetSyncData(BaseModel):
+    detail_id: int
+    sync_data: dict
+    data_type: str

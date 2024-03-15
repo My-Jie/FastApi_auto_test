@@ -31,7 +31,7 @@ from apps.case_service import crud as case_crud
 from apps.template.tool import ParseData, check_num, GenerateCase, InsertTempData, DelTempData, ReadSwagger
 from apps.case_service.tool import refresh, temp_to_case
 from apps.whole_conf import crud as conf_crud
-from tools import CreateExcel, OperationJson, compare_data
+from tools import CreateExcel, OperationJson, compare_data, apply_changes
 from .tool import send_api, get_jsonpath, del_debug, curl_to_request_kwargs
 
 template = APIRouter()
@@ -834,24 +834,24 @@ async def save_api_path(sad: schemas.SaveApiPath, db: Session = Depends(get_db))
         return await response_code.resp_200()
 
 
-@template.put(
-    '/sync/api/data',
-    name='同步模板数据'
+@template.get(
+    '/get/sync/api/data',
+    name='查询模板可同步的数据'
 )
-async def sync_api_data(
+async def get_sync_api_data(
         detail_id: int,
         data_type: str,
         sync_type: str,
         db: Session = Depends(get_db)
 ):
-    detail_data = await crud.get_tempdata_detail(db=db, detail_id=detail_id)
+    detail_data = await crud.get_tempdata_detail(db=db, detail_id=detail_id, temp_name=True)
     if not detail_data:
         return await response_code.resp_400(message='没有获取到这个详情数据')
 
     data_type_dict = {
-        'params': detail_data.params,
-        'data': detail_data.data,
-        'headers': detail_data.headers
+        'params': detail_data[0].params,
+        'data': detail_data[0].data,
+        'headers': detail_data[0].headers
     }
     now_temp = data_type_dict.get(data_type)
     if now_temp is False:
@@ -859,11 +859,11 @@ async def sync_api_data(
 
     temp_data = await crud.sync_temp(
         db=db,
-        number=detail_data.number,
-        method=detail_data.method,
-        path=detail_data.path,
+        number=detail_data[0].number,
+        method=detail_data[0].method,
+        path=detail_data[0].path,
         data_type=data_type,
-        temp_id=detail_data.temp_id if sync_type == 'temp' else None,
+        temp_id=detail_data[0].temp_id if sync_type == 'temp' else None,
     )
 
     for x in temp_data:
@@ -878,13 +878,52 @@ async def sync_api_data(
 
     return {
         'now_temp': {
-            'temp_id': detail_data.temp_id,
-            'number': detail_data.number,
-            'method': detail_data.method,
-            'path': detail_data.path,
+            'temp_id': detail_data[0].temp_id,
+            'number': detail_data[0].number,
+            'method': detail_data[0].method,
+            'path': detail_data[0].path,
             'data': now_temp,
             'type': data_type,
-            'description': detail_data.description
+            'description': detail_data[0].description,
+            'temp_name': detail_data[1].temp_name,
+            'source': 'API模板'
         },
         'old_temp': temp_data
     }
+
+
+@template.put(
+    '/put/sync/api/data',
+    name='同步模板数据'
+)
+async def put_sync_api_data(
+        ssd: schemas.SetSyncData,
+        db: Session = Depends(get_db)
+):
+    detail_data = await crud.get_tempdata_detail(db=db, detail_id=ssd.detail_id)
+    if not detail_data:
+        return await response_code.resp_400(message='没有获取到这个详情数据')
+
+    data_type_dict = {
+        'params': detail_data.params,
+        'data': detail_data.data,
+        'headers': detail_data.headers
+    }
+
+    now_temp = data_type_dict.get(ssd.data_type)
+    if now_temp is False:
+        await response_code.resp_400(message='数据类型错误')
+
+    try:
+        rep_data = await apply_changes(now_temp, ssd.sync_data)
+    except KeyError as e:
+        return await response_code.resp_400(message=f'同步失败, 不存在的key: {e}')
+
+    if ssd.data_type == 'params':
+        await crud.save_temp_info(db=db, detail_id=ssd.detail_id, params=rep_data)
+    if ssd.data_type == 'data':
+        await crud.save_temp_info(db=db, detail_id=ssd.detail_id, data=rep_data)
+    if ssd.data_type == 'headers':
+        await crud.save_temp_info(db=db, detail_id=ssd.detail_id, headers=rep_data)
+
+    return await response_code.resp_200(data=rep_data)

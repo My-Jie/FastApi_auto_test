@@ -204,13 +204,21 @@ async def get_template_data(db: Session, temp_name: str = None, temp_id: int = N
         ).all()
 
 
-async def get_tempdata_detail(db: Session, detail_id: int, ):
+async def get_tempdata_detail(db: Session, detail_id: int, temp_name: bool = None):
     """
     查询模板数据
     :param db:
     :param detail_id:
+    :param temp_name:
     :return:
     """
+    if temp_name:
+        return db.query(models.TemplateData, models.Template).filter(
+            models.TemplateData.id == detail_id,
+        ).filter(
+            models.TemplateData.temp_id == models.Template.id
+        ).first()
+
     return db.query(models.TemplateData).filter(
         models.TemplateData.id == detail_id,
     ).first()
@@ -436,8 +444,9 @@ async def get_api_count(db: Session, today: bool = None):
 
 async def save_temp_info(
         db: Session,
-        temp_id: int,
-        number: int,
+        temp_id: int = None,
+        number: int = None,
+        detail_id: int = None,
         params: dict = None,
         data: dict = None,
         headers: dict = None,
@@ -445,10 +454,15 @@ async def save_temp_info(
     """
     更新用例的数据
     """
-    db_temp = db.query(models.TemplateData).filter(
-        models.TemplateData.temp_id == temp_id,
-        models.TemplateData.number == number,
-    ).first()
+    if detail_id:
+        db_temp = db.query(models.TemplateData).filter(
+            models.TemplateData.id == detail_id,
+        ).first()
+    else:
+        db_temp = db.query(models.TemplateData).filter(
+            models.TemplateData.temp_id == temp_id,
+            models.TemplateData.number == number,
+        ).first()
 
     if db_temp:
         if params is not None:
@@ -505,61 +519,46 @@ async def sync_temp(
     :return:
     """
     if temp_id:
-        db_temp = db.query(models.TemplateData).filter(
+        db_temp = db.query(models.TemplateData, models.Template).filter(
             models.TemplateData.temp_id == temp_id,
             models.TemplateData.method == method,
             models.TemplateData.path == path,
+        ).filter(
+            models.TemplateData.temp_id == models.Template.id
         ).all()
     else:
-        db_temp = db.query(models.TemplateData).filter(
+        db_temp = db.query(models.TemplateData, models.Template).filter(
             models.TemplateData.method == method,
             models.TemplateData.path == path,
+        ).filter(
+            models.TemplateData.temp_id == models.Template.id
         ).all()
 
-    if data_type == 'params':
-        return [
-            {
-                'temp_id': x.temp_id,
-                'number': x.number,
-                'method': x.method,
-                'path': x.path,
-                'data': x.params,
-                'description': x.description,
-                'active_name': '1',
-            } for x in db_temp if any([
-                x.temp_id == temp_id and x.number != number,
-                x.temp_id != temp_id and x.number == number
-            ])
-        ]
+    temp_list = []
+    for x in db_temp:
+        if any([
+            x[0].temp_id == temp_id and x[0].number != number,
+            x[0].temp_id != temp_id and x[0].number == number
+        ]):
+            type_dict = {
+                'params': x[0].params,
+                'data': x[0].data,
+                'headers': x[0].headers
+            }
+            temp_list.append(
+                {
+                    'id': x[0].id,
+                    'temp_id': x[0].temp_id,
+                    'number': x[0].number,
+                    'method': x[0].method,
+                    'path': x[0].path,
+                    'data': type_dict.get(data_type),
+                    'description': x[0].description,
+                    'active_name': '1',
+                    'type': data_type,
+                    'temp_name': x[1].temp_name,
+                    'source': 'API模板'
+                }
+            )
 
-    if data_type == 'data':
-        return [
-            {
-                'temp_id': x.temp_id,
-                'number': x.number,
-                'method': x.method,
-                'path': x.path,
-                'data': x.data,
-                'description': x.description,
-                'active_name': '1',
-            } for x in db_temp if any([
-                x.temp_id == temp_id and x.number != number,
-                x.temp_id != temp_id and x.number == number
-            ])
-        ]
-
-    if data_type == 'headers':
-        return [
-            {
-                'temp_id': x.temp_id,
-                'number': x.number,
-                'method': x.method,
-                'path': x.path,
-                'data': x.headers,
-                'description': x.description,
-                'active_name': '1',
-            } for x in db_temp if any([
-                x.temp_id == temp_id and x.number != number,
-                x.temp_id != temp_id and x.number == number
-            ])
-        ]
+    return temp_list
