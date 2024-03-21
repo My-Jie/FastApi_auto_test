@@ -507,6 +507,7 @@ async def sync_temp(
         path: str,
         data_type: str,
         temp_id: int = None,
+        temp_all: bool = False
 ):
     """
     按method+path查询模板的数据
@@ -515,10 +516,11 @@ async def sync_temp(
     :param method:
     :param path:
     :param data_type:
-    :param temp_id: 传了temp_id就查询当前模板的数据， 没有传就查询所有
+    :param temp_all: 没传temp_all就查询当前模板的数据， 传就查询所有
+    :param temp_id:
     :return:
     """
-    if temp_id:
+    if not temp_all:
         db_temp = db.query(models.TemplateData, models.Template).filter(
             models.TemplateData.temp_id == temp_id,
             models.TemplateData.method == method,
@@ -536,15 +538,11 @@ async def sync_temp(
 
     temp_list = []
     for x in db_temp:
-        if any([
-            x[0].temp_id == temp_id and x[0].number != number,
-            x[0].temp_id != temp_id and x[0].number == number
-        ]):
-            type_dict = {
-                'params': x[0].params,
-                'data': x[0].data,
-                'headers': x[0].headers
-            }
+        if not (x[0].temp_id == temp_id and x[0].number == number):
+            # if any([
+            #     x[0].temp_id == temp_id and x[0].number != number,
+            #     x[0].temp_id != temp_id and x[0].number == number
+            # ]):
             temp_list.append(
                 {
                     'id': x[0].id,
@@ -552,9 +550,13 @@ async def sync_temp(
                     'number': x[0].number,
                     'method': x[0].method,
                     'path': x[0].path,
-                    'data': type_dict.get(data_type),
+                    'data': {
+                        'params': x[0].params,
+                        'data': x[0].data,
+                        'headers': x[0].headers
+                    }.get(data_type),
                     'description': x[0].description,
-                    'active_name': '1',
+                    'active_name': '4',
                     'type': data_type,
                     'temp_name': x[1].temp_name,
                     'source': 'API模板'

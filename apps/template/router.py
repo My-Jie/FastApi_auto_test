@@ -593,7 +593,7 @@ async def create_new_temp(
     '/temp/all',
     name='模板全部数据'
 )
-async def temp_all(db: Session = Depends(get_db)):
+async def temp_all_data(db: Session = Depends(get_db)):
     """
     查询模板全部数据
     """
@@ -842,29 +842,32 @@ async def get_sync_api_data(
         detail_id: int,
         data_type: str,
         sync_type: str,
+        temp_all: bool = False,
+        case_all: bool = False,
         db: Session = Depends(get_db)
 ):
     detail_data = await crud.get_tempdata_detail(db=db, detail_id=detail_id, temp_name=True)
     if not detail_data:
         return await response_code.resp_400(message='没有获取到这个详情数据')
 
-    data_type_dict = {
+    now_temp = {
         'params': detail_data[0].params,
         'data': detail_data[0].data,
         'headers': detail_data[0].headers
-    }
-    now_temp = data_type_dict.get(data_type)
-    if now_temp is False:
+    }.get(data_type)
+    if now_temp is None:
         await response_code.resp_400(message='数据类型错误')
 
-    temp_data = await crud.sync_temp(
-        db=db,
-        number=detail_data[0].number,
-        method=detail_data[0].method,
-        path=detail_data[0].path,
-        data_type=data_type,
-        temp_id=detail_data[0].temp_id if sync_type == 'temp' else None,
-    )
+    if sync_type == 'temp':
+        temp_data = await crud.sync_temp(
+            db=db,
+            number=detail_data[0].number,
+            method=detail_data[0].method,
+            path=detail_data[0].path,
+            data_type=data_type,
+            temp_id=detail_data[0].temp_id,
+            temp_all=temp_all
+        )
 
     for x in temp_data:
         diff = await compare_data(now_temp, x['data'])
@@ -875,6 +878,8 @@ async def get_sync_api_data(
         if diff['added']:
             x['active_name'] = '1'
         x['diff'] = diff
+
+    temp_data.sort(key=lambda i: i['temp_id'] == detail_data[0].temp_id, reverse=True)
 
     return {
         'now_temp': {
@@ -904,14 +909,12 @@ async def put_sync_api_data(
     if not detail_data:
         return await response_code.resp_400(message='没有获取到这个详情数据')
 
-    data_type_dict = {
+    now_temp = {
         'params': detail_data.params,
         'data': detail_data.data,
         'headers': detail_data.headers
-    }
-
-    now_temp = data_type_dict.get(ssd.data_type)
-    if now_temp is False:
+    }.get(ssd.data_type)
+    if now_temp is None:
         await response_code.resp_400(message='数据类型错误')
 
     try:
