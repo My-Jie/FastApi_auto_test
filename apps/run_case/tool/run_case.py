@@ -47,62 +47,7 @@ async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict 
     await executor.collect_config(setting_info_dict=setting_info_dict)
     await executor.collect_req_data()
     await executor.executor_api()
-
-    # 把 fo_service 里面能提前处理的数据处理了
-
-    # for case_id in case_ids:
-    #     case_info = await case_crud.get_case_info(db=db, case_id=case_id)
-    #     if case_info:
-    #         # 拿到测试数据
-    #         case_data = await case_crud.get_case_data(db=db, case_id=case_info[0].id)
-    #         # 拿到模板数据
-    #         temp_data = await temp_crud.get_template_data(db=db, temp_id=case_info[0].temp_id)
-    #
-    #         if setting_info_dict:
-    #             temp_data = await whole_host(
-    #                 temp_data=copy.deepcopy(temp_data),
-    #                 temp_hosts=setting_info_dict.get('temp_host')
-    #             )
-    #
-    #         # 拿到项目名称、模板名称
-    #         temp_info = await temp_crud.get_temp_name(db=db, temp_id=case_info[0].temp_id)
-    #         project_code = await conf_crud.get_project_code(db=db, id_=temp_info[0].project_name)
-    #         # 处理数据，执行用例
-    #         try:
-    #             case, api_report = await RunApi().fo_service(
-    #                 db=db,
-    #                 case_id=case_id,
-    #                 temp_data=temp_data,
-    #                 case_data=case_data,
-    #                 temp_pro=project_code,
-    #                 temp_name=temp_info[0].temp_name,
-    #                 setting_info_dict=setting_info_dict
-    #             )
-    #         except (
-    #                 ServerTimeoutError,
-    #                 ServerConnectionError,
-    #                 ServerDisconnectedError,
-    #                 ClientConnectorError,
-    #                 ClientOSError
-    #         ) as e:
-    #             raise Exception(f'网络访问失败: {str(e)}')
-    #
-    #         except IndexError as e:
-    #             raise Exception(f': {str(e)}')
-    #
-    #         report_list.append(
-    #             {
-    #                 'case_name': case,
-    #                 'case_id': case_id,
-    #                 'is_fail': api_report['is_fail'],
-    #                 'total_time': api_report['total_time'],
-    #                 'run_order': api_report['run_order'],
-    #                 'success': api_report['success_case'],
-    #                 'fail': api_report['fail_case'],
-    #             }
-    #         )
-    #     else:
-    #         report_list.append({})
+    await executor.collect_report()
 
     return []
 

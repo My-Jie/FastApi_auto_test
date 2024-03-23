@@ -28,16 +28,18 @@ async def create_api_list(db: Session, data: schemas.ApiReportListInt):
     return db_data
 
 
-async def get_max_run_number(db: Session, case_id: int):
+async def get_max_run_number(db: Session, case_ids: List[int]):
     """
     获取最大的运行编号
     :param db:
-    :param case_id:
+    :param case_ids:
     :return:
     """
     return db.query(func.max(models.ApiReportList.run_number)).filter(
-        models.ApiReportList.case_id == case_id,
-    ).scalar()
+        models.ApiReportList.case_id.in_(case_ids),
+    ).group_by(
+        models.ApiReportList.case_id
+    ).all()
 
 
 async def get_api_list(db: Session, case_id: int, page: int = 1, size: int = 10):

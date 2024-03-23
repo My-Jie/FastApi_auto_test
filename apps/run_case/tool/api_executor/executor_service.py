@@ -19,6 +19,7 @@ from aiohttp import FormData
 from sqlalchemy.orm import Session
 from apps.case_service import crud as case_crud
 from apps.template import crud as temp_crud
+from apps.api_report import crud as report_crud
 from aiohttp import client_exceptions
 
 from tools import logger, get_cookie, AsyncMySql
@@ -46,6 +47,7 @@ class ExecutorService(ApiBase):
         :return:
         """
         # 查询用例数据
+        # todo 相同的id重复执行，查出来的数据是一样的，要处理
         case_data = await case_crud.get_case_data_group(self._db, case_ids=kwargs['case_ids'])
         case_ids = {x[0].id for x in case_data}
         if len(case_ids) != len(kwargs['case_ids']):
@@ -90,7 +92,7 @@ class ExecutorService(ApiBase):
         :return:
         """
         api_group = []
-        for case_id, case_data in self._case_group.items():
+        for _, case_data in self._case_group.items():
             api_list = []
             for case in case_data:
                 api_data = {
@@ -103,7 +105,6 @@ class ExecutorService(ApiBase):
                         'description': case[1].description,
                         'json_body': 'json' if case[3].json_body == 'json' else 'data',
                         'file': case[3].file,
-                        'result': 0,  # 成功0、失败1、跳过2
                         'run_status': True  # 执行中ture， 停止false
                     },
                     'history': {
@@ -128,10 +129,13 @@ class ExecutorService(ApiBase):
                         f"{'json' if case[3].json_body == 'json' else 'data'}": case[1].data,
                     },
                     'response_info': [],  # 可能会存在单接口多次请求的情况
-                    'report': [],  # 校验结果同理
+                    'assert': [],  # 校验结果同理
+                    'report': {
+                        'result': 0,  # 成功0、失败1、跳过2
+                        'is_executor': False,
+                    },
                     'config': case[1].config,
                     'check': case[1].check,
-
                 }
 
                 # 处理附件上传
@@ -145,12 +149,9 @@ class ExecutorService(ApiBase):
                             filename=file['fileName'].encode().decode('unicode_escape')
                         )
                     api_data['request_info']['data'] = files_data
-
                 api_list.append(api_data)
-
             api_group.append(api_list)
-
-        self.api_group = api_group
+        self.api_group = copy.deepcopy(api_group)
 
     async def executor_api(self, sync: bool = True):
         """
@@ -159,15 +160,48 @@ class ExecutorService(ApiBase):
         """
         if sync:
             for api_list in self.api_group:
-                await self._run_api(api_list=api_list)
+                try:
+                    await self._run_api(api_list=api_list)
+                except client_exceptions.ClientConnectorError as e:
+                    logger.error(e)
         else:
             pass
 
     async def collect_report(self):
         """
-
+        处理执行结果报告
         :return:
         """
+
+        run_numbers = await report_crud.get_max_run_number(db=self._db, case_ids=list(self._case_group.keys()))
+        print(run_numbers)
+
+        for api_list in self.api_group:
+            report = {
+                'report_list': {},
+                'report_detail_list': []
+            }
+            for api in api_list:
+                # 数据格式重来，
+                report['report_detail_list'].append({
+                    'status': 'pass' if api['report']['result'] == 0 else 'fail',
+                    'number': api['api_info']['number'],
+                    'method': api['request_info']['method'],
+                    'host': api['api_info']['host'],
+                    'path': api['history']['path'],
+                    'run_time': api['response_info'][-1]['response_time'],
+                    'request_info': api['request_info'],
+                    'response_info': {
+                        'status_code': api['response_info'][-1]['status_code'],
+                        'response': api['response_info'][-1]['response'],
+                        'response_headers': api['response_info'][-1]['headers'],
+                    },
+                    'expect_info': api['check'],
+                    'actual_info': {x['key']: [x['actual']] for x in api['assert']},
+                    'jsonpath_info': api['check'],
+                    'conf_info': api['check'],
+                    'other_info': api['check']
+                })
 
     async def _run_api(self, api_list: list):
         """
@@ -176,7 +210,6 @@ class ExecutorService(ApiBase):
         :return:
         """
         sees = aiohttp.client.ClientSession(timeout=aiohttp.ClientTimeout(total=120))
-
         data_processing = DataProcessing(db=self._db)
         logger.info(
             f"{'=' * 30}{api_list[0]['api_info']['temp_name']}-{api_list[0]['api_info']['case_name']}{'=' * 30}"
@@ -202,7 +235,7 @@ class ExecutorService(ApiBase):
             # ⬜️================== 🍉轮询发起请求，单接口的默认间隔时间超过5s，每次请求间隔5s进行轮询🍉 ==================⬜️ #
             sleep = api['config']['sleep']
             while True:
-                logger.info(f"{'%-20s' % api['api_info']['description']}-{api['request_info']['url']}")
+                logger.info(f"{api['api_info']['case_id']}-{api['api_info']['number']}-{api['request_info']['url']}")
                 start_time = time.monotonic()
                 res = await sees.request(**api['request_info'], allow_redirects=False)
 
@@ -223,11 +256,14 @@ class ExecutorService(ApiBase):
 
                 # 断言结果
                 response_info['response']['status_code'] = res.status
-                await self._assert(check=api['check'], response=response_info['response'])
+                result = await self._assert(check=api['check'], response=response_info['response'])
+                api['assert'].append(result)
                 del response_info['response']['status_code']
+                if not [x for x in result if x['is_fail']]:  # 判断断言结果，没有失败则退出循环，不继续轮询
+                    break
 
-                # 单接口轮询控制
-                if sleep < 5:
+                # 轮询控制
+                if sleep <= 5:
                     break
                 else:
                     sleep -= 5
@@ -238,17 +274,29 @@ class ExecutorService(ApiBase):
             if api['config'].get('is_login'):
                 self._cookie[api['api_info']['host']] = await get_cookie(rep_type='aiohttp', response=res)
 
+            # 轮询结束后，记录单接口执行结果
+            api['report']['result'] = 1 if [x for x in api['assert'][-1] if x['is_fail']] else 0
+            api['report']['is_executor'] = True
+
             # 退出循环执行的判断
             if any([
+                # 主动停止
                 api['config'].get('stop'),
-                setting['global_fail_stop'] and api['config'].get('fail_stop')
+                # 执行失败
+                all([
+                    setting['global_fail_stop'],  # 配置中的失败停止总开关：开
+                    api['config'].get('fail_stop'),  # 单接口配置失败停止：开
+                    api['report']['result'] == 1  # 单接口结果：失败
+                ]),
             ]):
+                api['api_info']['run_status'] = False  # 标记停止运行的接口
                 await sees.close()
                 break
 
-            if api['config'].get('sleep') < 5:
+            if api['config'].get('sleep') <= 5:
                 await asyncio.sleep(api['config']['sleep'])  # 业务场景用例执行下，默认的间隔时间
-
+        else:
+            api_list[-1]['api_info']['run_status'] = False  # 标记停止运行的接口
         await sees.close()
 
     async def _assert(self, check: dict, response: dict):
@@ -258,29 +306,33 @@ class ExecutorService(ApiBase):
         :param response:
         :return:
         """
+        result = []
         for k, v in check.items():
-            # 从数据库获取需要的值
             if isinstance(v, list) and 'sql_' == k[:4]:
+                # 从数据库获取实际的值
                 sql_data = await self._sql_data(v[1], self._setting_info_dict.get('db', {}))
-                is_fail = await AssertCase.assert_case(
-                    compare='==',
-                    expect=v[0],
-                    actual=sql_data[0],
-                )
+                value = sql_data[0]
+            else:
+                # 从响应信息获取需要的值
+                value = jsonpath.jsonpath(response, f'$..{k}')
+                if value:
+                    value = value[0]
 
-                check[k][1] = sql_data[0]
-                continue
-
-            # 从响应信息获取需要的值
-            value = jsonpath.jsonpath(response, f'$..{k}')
-            if value:
-                value = value[0]
             # 校验结果
             is_fail = await AssertCase.assert_case(
                 compare='==' if isinstance(v, (str, int, float, bool, dict)) else v[0],
                 expect=v if isinstance(v, (str, int, float, bool, dict)) else v[1],
                 actual=value,
             )
+            result.append({
+                "key": k,
+                "actual": value,
+                "compare": v[0] if not isinstance(v, (str, int, float, bool, dict)) else '==',
+                "expect": v[1] if not isinstance(v, (str, int, float, bool, dict)) else v,
+                "is_fail": is_fail,
+            })
+
+        return result
 
     @staticmethod
     async def _sql_data(sql: str, db_config: dict):
