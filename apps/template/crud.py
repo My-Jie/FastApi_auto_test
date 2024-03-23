@@ -8,6 +8,7 @@
 """
 
 import datetime
+from typing import List
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
@@ -564,3 +565,18 @@ async def sync_temp(
             )
 
     return temp_list
+
+
+async def get_temp_data_group(db: Session, temp_ids: List[int]):
+    """
+    获取模板分组
+    :param db:
+    :param temp_ids:
+    :return:
+    """
+    return db.query(models.Template, models.TemplateData).filter(
+        models.TemplateData.temp_id.in_(temp_ids),
+        models.Template.id == models.TemplateData.temp_id
+    ).order_by(
+        models.TemplateData.temp_id
+    ).all()

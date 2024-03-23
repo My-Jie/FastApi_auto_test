@@ -49,11 +49,14 @@ async def run_case_name(ids: schemas.RunCase, db: Session = Depends(get_db)):
         del SETTING_LIST[ids.setting_list_id]
 
     # 执行用例
-    report_list = await run_service_case(
-        db=db,
-        case_ids=ids.case_ids,
-        setting_info_dict=SETTING_INFO_DICT.get(ids.setting_list_id, {})
-    )
+    try:
+        report_list = await run_service_case(
+            db=db,
+            case_ids=ids.case_ids,
+            setting_info_dict=SETTING_INFO_DICT.get(ids.setting_list_id, {})
+        )
+    except ValueError as e:
+        return await response_code.resp_400(message=str(e))
 
     if SETTING_INFO_DICT.get(ids.setting_list_id):
         del SETTING_INFO_DICT[ids.setting_list_id]

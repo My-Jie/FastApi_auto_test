@@ -13,6 +13,7 @@ from sqlalchemy import func
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm import Session
 from apps.case_service import models, schemas
+from typing import List
 
 
 async def create_test_case(db: Session, case_name: str, mode: str, temp_id: int):
@@ -504,4 +505,11 @@ async def get_case_info_to_number(
     return db.query(models.TestCaseData).filter(
         models.TestCaseData.case_id == case_id,
         models.TestCaseData.number.in_(numbers)
+    ).all()
+
+
+async def get_case_data_group(db: Session, case_ids: List[int]):
+    return db.query(models.TestCase, models.TestCaseData).filter(
+        models.TestCaseData.case_id.in_(case_ids),
+        models.TestCase.id == models.TestCaseData.case_id
     ).all()

@@ -18,19 +18,15 @@ class AssertCase:
     @classmethod
     async def assert_case(
             cls,
-            k: str,
             compare: str,
             expect: Any,
             actual: Any,
-            result: list
     ) -> bool:
         """
         断言
-        :param k: 校验字段
         :param compare: 比较符
         :param expect: 预期值
         :param actual: 实际值
-        :param result: 校验结果集
         :return:
         """
         assert_dict = {
@@ -49,15 +45,6 @@ class AssertCase:
         }
 
         is_fail = assert_dict.get(compare)(actual, expect)
-        result.append(
-            {
-                'key': k,
-                'actual': actual,
-                'compare': compare,
-                'expect': expect,
-                'is_fail': 'fail' if is_fail else 'pass'
-            }
-        )
 
         return is_fail
 

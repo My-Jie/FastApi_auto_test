@@ -10,8 +10,8 @@
 
 import base64
 from aiohttp import FormData
-from apps.template import schemas as temp
-from apps.case_service import schemas as service
+# from apps.template import schemas as temp
+# from apps.case_service import schemas as service
 from tools import replace_data
 from sqlalchemy.orm import Session
 from tools.faker_data import FakerData
@@ -36,53 +36,45 @@ class DataProcessing:
 
     async def processing(
             self,
-            temp_data: temp.TemplateDataOut,
-            case_data: service.TestCaseData,
-            response: list,
-            response_headers: list,
+            url: str,
+            params: dict,
+            data: dict,
+            headers: dict,
+            check: dict,
+            api_list: list,
             customize: dict,
     ):
         """
         一次性处理接口所有的数据
-        :param temp_data: 模板数据
-        :param case_data: 测试数据
-        :param response: 响应列表
-        :param response_headers: 响应头列表
-        :param customize: 环境配置的数据
         :return:
         """
         url = await self._url(
-            old_str=f"{temp_data.host}{case_data.path}",
-            response=response,
-            response_headers=response_headers,
+            old_str=url,
+            api_list=api_list,
             customize=customize
         )
 
         params = await self._json(
-            data=case_data.params,
-            response=response,
-            response_headers=response_headers,
+            data=params,
+            api_list=api_list,
             customize=customize
         )
 
         data = await self._json(
-            data=case_data.data,
-            response=response,
-            response_headers=response_headers,
+            data=data,
+            api_list=api_list,
             customize=customize
         )
 
         headers = await self._json(
-            data=case_data.headers,
-            response=response,
-            response_headers=response_headers,
+            data=headers,
+            api_list=api_list,
             customize=customize
         )
 
         check = await self._json(
-            data=case_data.check,
-            response=response,
-            response_headers=response_headers,
+            data=check,
+            api_list=api_list,
             customize=customize
         )
 
@@ -91,15 +83,13 @@ class DataProcessing:
     async def _url(
             self,
             old_str: str,
-            response: list,
-            response_headers: list,
+            api_list: list,
             customize: dict,
     ):
         return await replace_data.replace_url(
             db=self.db,
             old_str=old_str,
-            response=response,
-            response_headers=response_headers,
+            api_list=api_list,
             faker=self.fk,
             code=self.code,
             extract=self.extract,
@@ -109,15 +99,13 @@ class DataProcessing:
     async def _json(
             self,
             data: dict,
-            response: list,
-            response_headers: list,
+            api_list: list,
             customize: dict,
     ):
         return await replace_data.replace_params_data(
             db=self.db,
             data=data,
-            response=response,
-            response_headers=response_headers,
+            api_list=api_list,
             faker=self.fk,
             code=self.code,
             extract=self.extract,

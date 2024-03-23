@@ -21,8 +21,7 @@ COUNT = ['+', '-', '*', '/', '//', '%']
 async def replace_params_data(
         db: Session,
         data: [dict, list],
-        response: list,
-        response_headers: list,
+        api_list: list,
         faker: FakerData,
         code: str = None,
         extract: str = '',
@@ -41,8 +40,7 @@ async def replace_params_data(
             return await header_srt(
                 db=db,
                 x=data_json,
-                response=response,
-                response_headers=response_headers,
+                api_list=api_list,
                 faker=faker,
                 code=code,
                 extract=extract,
@@ -57,8 +55,7 @@ async def replace_params_data(
                 target[key] = await header_srt(
                     db=db,
                     x=data_json[key],
-                    response=response,
-                    response_headers=response_headers,
+                    api_list=api_list,
                     faker=faker,
                     code=code,
                     extract=extract,
@@ -79,8 +76,7 @@ async def replace_params_data(
                         new_list.append(await header_srt(
                             db=db,
                             x=x,
-                            response=response,
-                            response_headers=response_headers,
+                            api_list=api_list,
                             faker=faker,
                             code=code,
                             extract=extract,
@@ -102,8 +98,7 @@ async def replace_params_data(
 async def replace_url(
         db: Session,
         old_str: str,
-        response: list,
-        response_headers: list,
+        api_list: list,
         faker: FakerData,
         code: str,
         extract: str,
@@ -115,8 +110,7 @@ async def replace_url(
     return await header_srt(
         db=db,
         x=old_str,
-        response=response,
-        response_headers=response_headers,
+        api_list=api_list,
         faker=faker,
         value_type='url',
         code=code,
@@ -128,8 +122,7 @@ async def replace_url(
 async def header_srt(
         db: Session,
         x: str,
-        response: list,
-        response_headers: list,
+        api_list: list,
         faker: FakerData,
         value_type: str = None,
         code: str = None,
@@ -141,8 +134,7 @@ async def header_srt(
     处理数据
     :param db:
     :param x:
-    :param response:
-    :param response_headers:
+    :param api_list:
     :param faker:
     :param value_type:
     :param code:
@@ -155,10 +147,12 @@ async def header_srt(
         replace_values: List[str] = re.compile(r'{{(.*?)}}', re.S).findall(x)
         for replace in replace_values:
             try:
-                if 'h$' in x:
-                    new_value = await _header_str_param(x=replace, response=response_headers)
-                else:
-                    new_value = await _header_str_param(x=replace, response=response)
+                # if 'h$' in x:
+                #     new_value = await _header_str_param(x=replace, response=response_headers)
+                # else:
+                #     new_value = await _header_str_param(x=replace, response=response)
+                is_header: bool = True if 'h$' in x else False
+                new_value = await _header_str_param(x=replace, api_list=api_list, is_header=is_header)
             except IndexError:
                 new_value = ''
 
@@ -216,11 +210,11 @@ async def header_srt(
     return x
 
 
-async def _header_str_param(x: str, response: list):
+async def _header_str_param(x: str, api_list: list, is_header: bool):
     """
     提取参数：字符串内容
     :param x:
-    :param response:
+    :param api_list:
     :return:
     """
     num, json_path = x.split('.', 1)
@@ -248,7 +242,15 @@ async def _header_str_param(x: str, response: list):
         for seek in seek_list:
             seek_value, compare, seek_name = seek.strip().split(' ')
             # 同级相邻
-            value_set = await _header_adjoin(seek_name, seek_value, compare, extract_key, response[int(num)])
+            value_set = await _header_adjoin(
+                seek_name,
+                seek_value,
+                compare,
+                extract_key,
+                api_list[
+                    int(num)
+                ]['response_info']['headers'] if is_header else api_list[int(num)]['response_info'][-1]['response'],
+            )
             if value_set:
                 if not value:
                     value = value_set
@@ -259,7 +261,12 @@ async def _header_str_param(x: str, response: list):
         else:
             return ''
 
-    value = jsonpath.jsonpath(response[int(num)], json_path)
+    value = jsonpath.jsonpath(
+        api_list[
+            int(num)
+        ]['response_info']['headers'] if is_header else api_list[int(num)]['response_info'][-1]['response'],
+        json_path
+    )
     if value:
         if start_index is None and end_index is None:
             return value[list_index]
