@@ -49,7 +49,7 @@ async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict 
     await executor.executor_api()
     await executor.collect_report()
 
-    return []
+    return executor.report_list
 
 
 async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_dict: dict = None):

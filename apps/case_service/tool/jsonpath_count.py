@@ -227,7 +227,7 @@ def count(case_id: int, case_list: list, temp_list: list, run_case: dict, get_te
                     },
                 }
 
-    # 转行为前端能处理的格式
+    # 转换为前端能处理的格式
     data_list = []
     for k, v in data_count.items():
         new_key = re.sub('{{', '', re.sub('}}', '', k))

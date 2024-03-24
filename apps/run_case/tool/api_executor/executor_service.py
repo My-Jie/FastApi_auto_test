@@ -15,12 +15,14 @@ import base64
 import asyncio
 import aiohttp
 import jsonpath
-from aiohttp import FormData
 from sqlalchemy.orm import Session
+from aiohttp import FormData, client_exceptions
 from apps.case_service import crud as case_crud
 from apps.template import crud as temp_crud
 from apps.api_report import crud as report_crud
-from aiohttp import client_exceptions
+from apps.api_report import schemas as report_schemas
+from apps.run_case import crud as run_crud
+from apps.case_service.tool import js_count
 
 from tools import logger, get_cookie, AsyncMySql
 from tools.read_setting import setting
@@ -129,13 +131,20 @@ class ExecutorService(ApiBase):
                         f"{'json' if case[3].json_body == 'json' else 'data'}": case[1].data,
                     },
                     'response_info': [],  # 可能会存在单接口多次请求的情况
-                    'assert': [],  # 校验结果同理
+                    'assert_info': [],  # 校验结果同理
                     'report': {
                         'result': 0,  # 成功0、失败1、跳过2
                         'is_executor': False,
                     },
                     'config': case[1].config,
                     'check': case[1].check,
+                    'jsonpath_info': {},
+                    # 扩展字段
+                    'other_info': {
+                        'description': case[1].description if case[1].description else '--',
+                        'timestamp': time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+                        'file': True if case[3].file else False,
+                    }
                 }
 
                 # 处理附件上传
@@ -174,34 +183,69 @@ class ExecutorService(ApiBase):
         """
 
         run_numbers = await report_crud.get_max_run_number(db=self._db, case_ids=list(self._case_group.keys()))
-        print(run_numbers)
+        run_numbers = {k: v for k, v in run_numbers}
 
         for api_list in self.api_group:
             report = {
-                'report_list': {},
-                'report_detail_list': []
+                'case_id': api_list[0]['api_info']['case_id'],
+                'run_number': run_numbers.get(api_list[0]['api_info']['case_id'], 0) + 1,
+                'total_api': len(api_list),
+                'initiative_stop': False,
+                'fail_stop': False,
+                'result': {
+                    'run_api': 0,
+                    'success': 0,
+                    'fail': 0,
+                    'skip': 0,
+                    'result': 0  # 成功0、失败1、跳过2,
+                },
+                'time': {
+                    'total_time': 0.0,
+                    'max_time': 0.0,
+                    'avg_time': 0.0,
+                }
             }
             for api in api_list:
-                # 数据格式重来，
-                report['report_detail_list'].append({
-                    'status': 'pass' if api['report']['result'] == 0 else 'fail',
-                    'number': api['api_info']['number'],
-                    'method': api['request_info']['method'],
-                    'host': api['api_info']['host'],
-                    'path': api['history']['path'],
-                    'run_time': api['response_info'][-1]['response_time'],
-                    'request_info': api['request_info'],
-                    'response_info': {
-                        'status_code': api['response_info'][-1]['status_code'],
-                        'response': api['response_info'][-1]['response'],
-                        'response_headers': api['response_info'][-1]['headers'],
-                    },
-                    'expect_info': api['check'],
-                    'actual_info': {x['key']: [x['actual']] for x in api['assert']},
-                    'jsonpath_info': api['check'],
-                    'conf_info': api['check'],
-                    'other_info': api['check']
-                })
+                if api['report']['is_executor']:
+                    report['result']['run_api'] += 1
+
+                if api['report']['result'] == 0:
+                    report['result']['success'] += 1
+
+                if api['report']['result'] == 1:
+                    report['result']['result'] = 1
+                    report['result']['fail'] += 1
+
+                if api['report']['result'] == 2:
+                    report['result']['skip'] += 1
+
+                if api['config'].get('stop'):
+                    report['initiative_stop'] = True
+
+                if api['config'].get('fail_stop'):
+                    report['fail_stop'] = True
+
+                response_time = api['response_info'][-1]['response_time']
+                max_time = report['time']['max_time']
+                report['time']['total_time'] += response_time
+                report['time']['max_time'] = response_time if response_time > max_time else max_time
+            else:
+                report['time']['avg_time'] = report['time']['total_time'] / report['result']['run_api']
+
+            async def save_report():
+                # 写入报告列表
+                db_data = await report_crud.create_api_list(db=self._db, data=report_schemas.ApiReportListInt(**report))
+                # 写入详情列表
+                await report_crud.create_api_detail(db=self._db, data=api_list, report_id=db_data.id)
+                # 更新用例次数
+                await run_crud.update_test_case_order(
+                    db=self._db,
+                    case_id=report['case_id'],
+                    is_fail={0: False, 1: True}.get(report['result']['result'])
+                )
+
+            asyncio.create_task(save_report())
+            self.report_list.append(report)
 
     async def _run_api(self, api_list: list):
         """
@@ -257,9 +301,9 @@ class ExecutorService(ApiBase):
                 # 断言结果
                 response_info['response']['status_code'] = res.status
                 result = await self._assert(check=api['check'], response=response_info['response'])
-                api['assert'].append(result)
+                api['assert_info'].append(result)
                 del response_info['response']['status_code']
-                if not [x for x in result if x['is_fail']]:  # 判断断言结果，没有失败则退出循环，不继续轮询
+                if not [x for x in result if x['result'] == 1]:  # 判断断言结果，没有失败则退出循环，不继续轮询
                     break
 
                 # 轮询控制
@@ -275,7 +319,7 @@ class ExecutorService(ApiBase):
                 self._cookie[api['api_info']['host']] = await get_cookie(rep_type='aiohttp', response=res)
 
             # 轮询结束后，记录单接口执行结果
-            api['report']['result'] = 1 if [x for x in api['assert'][-1] if x['is_fail']] else 0
+            api['report']['result'] = 1 if [x for x in api['assert_info'][-1] if x['result'] == 1] else 0
             api['report']['is_executor'] = True
 
             # 退出循环执行的判断
@@ -329,7 +373,7 @@ class ExecutorService(ApiBase):
                 "actual": value,
                 "compare": v[0] if not isinstance(v, (str, int, float, bool, dict)) else '==',
                 "expect": v[1] if not isinstance(v, (str, int, float, bool, dict)) else v,
-                "is_fail": is_fail,
+                "result": {True: 1, False: 0}.get(is_fail),
             })
 
         return result

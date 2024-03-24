@@ -15,7 +15,8 @@ from sqlalchemy.orm import Session
 class ApiBase(abc.ABC):
 
     def __init__(self):
-        self.api_group: dict = []  # 自定义对象，用于收集一些过程数据
+        self.api_group: list = []  # 自定义对象，用于收集一些过程数据
+        self.report_list: list = []
 
     @abc.abstractmethod
     async def collect_sql(self, **kwargs):

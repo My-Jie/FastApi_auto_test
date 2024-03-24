@@ -12,19 +12,28 @@ from pydantic import BaseModel
 from typing import Union, Optional
 
 
-class ApiReportListInt(BaseModel):
-    case_id: int
-    is_fail: bool
-    run_number: int
+class ReportResult(BaseModel):
     run_api: int
-    total_api: int
-    initiative_stop: int
-    fail_stop: int
     success: int
     fail: int
+    skip: int
+    result: int
+
+
+class ReportTime(BaseModel):
     total_time: Union[float, int]
     max_time: Union[float, int]
     avg_time: Union[float, int]
+
+
+class ApiReportListInt(BaseModel):
+    case_id: int
+    run_number: int
+    total_api: int
+    initiative_stop: int
+    fail_stop: int
+    result: ReportResult
+    time: ReportTime
 
     class Config:
         orm_mode = True
@@ -37,18 +46,15 @@ class ApiReportListOut(ApiReportListInt):
 
 
 class ApiReportDetailInt(BaseModel):
-    status: str
-    number: int
-    method: str
-    host: str
-    path: str
-    run_time: Union[float, int]
+    api_info: Optional[dict] = {}
+    history: Optional[dict] = {}
     request_info: Optional[dict] = {}
-    response_info: Optional[dict] = {}
-    expect_info: Optional[dict] = {}
-    actual_info: Optional[dict] = {}
+    response_info: Optional[list] = []
+    assert_info: Optional[list] = []
+    report: Optional[dict] = {}
+    config: Optional[dict] = {}
+    check: Optional[dict] = {}
     jsonpath_info: Union[list, dict] = []
-    conf_info: Optional[dict] = {}
     other_info: Optional[dict] = {}
 
     class Config:

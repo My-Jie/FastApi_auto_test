@@ -35,7 +35,7 @@ async def get_max_run_number(db: Session, case_ids: List[int]):
     :param case_ids:
     :return:
     """
-    return db.query(func.max(models.ApiReportList.run_number)).filter(
+    return db.query(models.ApiReportList.case_id, func.max(models.ApiReportList.run_number)).filter(
         models.ApiReportList.case_id.in_(case_ids),
     ).group_by(
         models.ApiReportList.case_id

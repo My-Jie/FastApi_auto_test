@@ -61,7 +61,7 @@ async def run_case_name(ids: schemas.RunCase, db: Session = Depends(get_db)):
     if SETTING_INFO_DICT.get(ids.setting_list_id):
         del SETTING_INFO_DICT[ids.setting_list_id]
 
-    return await response_code.resp_200(data={'report': report_list})
+    return await response_code.resp_200(data=report_list)
 
 
 @run_case.post(
