@@ -9,13 +9,12 @@
 """
 
 
-def replace_headers(cookies: dict, tmp_header: dict, case_header: dict, tmp_host: str, tmp_file: bool) -> dict:
+def replace_headers(cookie: str, tmp_header: dict, case_header: dict, tmp_file: bool) -> dict:
     """
     替换headers中的内容
-    :param cookies:
+    :param cookie:
     :param tmp_header:
     :param case_header:
-    :param tmp_host:
     :param tmp_file:
     :return:
     """
@@ -23,11 +22,10 @@ def replace_headers(cookies: dict, tmp_header: dict, case_header: dict, tmp_host
         tmp_header[k] = v
 
     # 替换cookie
-    if cookies.get(tmp_host):
-        if tmp_header.get('Cookie'):
-            tmp_header['Cookie'] = cookies[tmp_host]
-        if tmp_header.get('cookie'):
-            tmp_header['cookie'] = cookies[tmp_host]
+    if tmp_header.get('Cookie'):
+        tmp_header['Cookie'] = cookie
+    if tmp_header.get('cookie'):
+        tmp_header['cookie'] = cookie
 
     # 有附件时，要删除Content-Type
     if tmp_file and tmp_header.get('Content-Type'):

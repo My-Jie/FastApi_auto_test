@@ -22,8 +22,8 @@ from apps.template import crud as temp_crud
 from apps.api_report import crud as report_crud
 from apps.api_report import schemas as report_schemas
 from apps.run_case import crud as run_crud
-from apps.case_service.tool import js_count
-
+from apps.case_service.tool import jsonpath_count
+from apps.run_case import CASE_STATUS, CASE_RESPONSE, CASE_STATUS_LIST
 from tools import logger, get_cookie, AsyncMySql
 from tools.read_setting import setting
 
@@ -72,10 +72,8 @@ class ExecutorService(ApiBase):
         # 模板加入到用例的分组
         temp_data_dict = {(x[1].temp_id, x[1].number): x for x in temp_data}
         for k, v in case_group.items():
-            num = 0
-            for v_ in v:
-                case_group[k][num] += list(temp_data_dict[(v_[0].temp_id, v_[1].number)])
-                num += 1
+            for i, v_ in enumerate(v):
+                case_group[k][i] += list(temp_data_dict[(v_[0].temp_id, v_[1].number)])
 
         # 按用户请求顺序排序
         # {case_id： [(用例，用例详情，模板，模板详情)]}
@@ -110,23 +108,17 @@ class ExecutorService(ApiBase):
                         'run_status': True  # 执行中ture， 停止false
                     },
                     'history': {
-                        'path': case[3].path,
-                        'params': case[3].params,
-                        'data': case[3].data,
-                        'headers': case[3].headers,
+                        'path': case[1].path,
+                        'params': case[1].params,
+                        'data': case[1].data,
+                        'headers': case[1].headers,
                         'response': case[3].response,
                         'response_headers': case[3].response_headers
                     },
                     'request_info': {
                         'url': f'{case[3].host}{case[1].path}',
                         'method': case[3].method,
-                        'headers': replace_headers(  # 将用例中的headers临时替换到模板中
-                            cookies=self._cookie,
-                            tmp_header=case[3].headers,
-                            case_header=case[1].headers,
-                            tmp_host=case[3].host,
-                            tmp_file=case[3].file
-                        ),
+                        'headers': case[3].headers,
                         'params': case[1].params,
                         f"{'json' if case[3].json_body == 'json' else 'data'}": case[1].data,
                     },
@@ -138,7 +130,7 @@ class ExecutorService(ApiBase):
                     },
                     'config': case[1].config,
                     'check': case[1].check,
-                    'jsonpath_info': {},
+                    'jsonpath_info': [],
                     # 扩展字段
                     'other_info': {
                         'description': case[1].description if case[1].description else '--',
@@ -158,6 +150,7 @@ class ExecutorService(ApiBase):
                             filename=file['fileName'].encode().decode('unicode_escape')
                         )
                     api_data['request_info']['data'] = files_data
+
                 api_list.append(api_data)
             api_group.append(api_list)
         self.api_group = copy.deepcopy(api_group)
@@ -205,7 +198,11 @@ class ExecutorService(ApiBase):
                     'avg_time': 0.0,
                 }
             }
+
             for api in api_list:
+                if not api['report']['is_executor']:
+                    break
+
                 if api['report']['is_executor']:
                     report['result']['run_api'] += 1
 
@@ -224,11 +221,25 @@ class ExecutorService(ApiBase):
 
                 if api['config'].get('fail_stop'):
                     report['fail_stop'] = True
-
                 response_time = api['response_info'][-1]['response_time']
                 max_time = report['time']['max_time']
                 report['time']['total_time'] += response_time
                 report['time']['max_time'] = response_time if response_time > max_time else max_time
+
+                # 获取jsonpath数据
+                class Case:
+                    number = api['api_info']['number']
+                    path = api['history']['path']
+                    params = api['history']['params']
+                    data = api['history']['data']
+                    headers = api['history']['headers']
+                    check = api['check']
+
+                api['jsonpath_info'] = jsonpath_count(
+                    case_list=[Case],
+                    temp_list=[],
+                    run_case=api_list
+                )
             else:
                 report['time']['avg_time'] = report['time']['total_time'] / report['result']['run_api']
 
@@ -236,7 +247,11 @@ class ExecutorService(ApiBase):
                 # 写入报告列表
                 db_data = await report_crud.create_api_list(db=self._db, data=report_schemas.ApiReportListInt(**report))
                 # 写入详情列表
-                await report_crud.create_api_detail(db=self._db, data=api_list, report_id=db_data.id)
+                await report_crud.create_api_detail(
+                    db=self._db,
+                    data=[x for x in api_list if x['report']['is_executor']],
+                    report_id=db_data.id
+                )
                 # 更新用例次数
                 await run_crud.update_test_case_order(
                     db=self._db,
@@ -246,6 +261,7 @@ class ExecutorService(ApiBase):
 
             asyncio.create_task(save_report())
             self.report_list.append(report)
+            CASE_RESPONSE[report['case_id']] = copy.deepcopy(api_list)
 
     async def _run_api(self, api_list: list):
         """
@@ -270,7 +286,12 @@ class ExecutorService(ApiBase):
                 url=api['request_info']['url'],
                 params=api['request_info']['params'],
                 data=api['request_info'].get('data') or api['request_info'].get('json'),
-                headers=api['request_info']['headers'],
+                headers=replace_headers(  # 将用例中的headers临时替换到模板中
+                    cookie=self._cookie.get(api['api_info']['host'], ''),
+                    tmp_header=api['request_info']['headers'],
+                    case_header=api['history']['headers'],
+                    tmp_file=api['api_info']['file']
+                ),
                 check=api['check'],
                 api_list=api_list,
                 customize=await check_customize(self._setting_info_dict.get('customize', {})),
@@ -279,7 +300,6 @@ class ExecutorService(ApiBase):
             # ⬜️================== 🍉轮询发起请求，单接口的默认间隔时间超过5s，每次请求间隔5s进行轮询🍉 ==================⬜️ #
             sleep = api['config']['sleep']
             while True:
-                logger.info(f"{api['api_info']['case_id']}-{api['api_info']['number']}-{api['request_info']['url']}")
                 start_time = time.monotonic()
                 res = await sees.request(**api['request_info'], allow_redirects=False)
 
@@ -321,6 +341,10 @@ class ExecutorService(ApiBase):
             # 轮询结束后，记录单接口执行结果
             api['report']['result'] = 1 if [x for x in api['assert_info'][-1] if x['result'] == 1] else 0
             api['report']['is_executor'] = True
+            logger.info(
+                f"{api['api_info']['case_id']}-{api['api_info']['number']}-"
+                f"{api['request_info']['url']} {dict({0: 'SUCCESS', 1: 'FAIL'}).get(api['report']['result'])}"
+            )
 
             # 退出循环执行的判断
             if any([

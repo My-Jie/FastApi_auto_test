@@ -486,11 +486,15 @@ async def get_api_info(case_id: int, type_: str, number: int):
     if CASE_RESPONSE.get(case_id):
         try:
             return_dict = {
-                'path': CASE_RESPONSE[case_id][number].get('path'),
-                'params': CASE_RESPONSE[case_id][number].get('params'),
-                'data': CASE_RESPONSE[case_id][number].get('data'),
-                'headers': CASE_RESPONSE[case_id][number].get('headers'),
-                'response': CASE_RESPONSE[case_id][number].get('response'),
+                'path': CASE_RESPONSE[case_id][number]['request_info'].get('url'),
+                'params': CASE_RESPONSE[case_id][number]['request_info'].get('params'),
+                'data': CASE_RESPONSE[case_id][number]['request_info'].get(
+                    'data'
+                ) or CASE_RESPONSE[case_id][number]['request_info'].get(
+                    'json'
+                ),
+                'headers': CASE_RESPONSE[case_id][number]['request_info'].get('headers'),
+                'response': CASE_RESPONSE[case_id][number]['response_info'][-1].get('response'),
             }
             return return_dict.get(type_)
         except IndexError:

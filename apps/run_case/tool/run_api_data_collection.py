@@ -9,7 +9,7 @@
 """
 
 import time
-from apps.case_service.tool import js_count
+from apps.case_service.tool import jsonpath_count
 
 
 def api_detail(
@@ -44,7 +44,7 @@ def api_detail(
         },
         'expect_info': check,
         'actual_info': actual,
-        'jsonpath_info': js_count(
+        'jsonpath_info': jsonpath_count(
             case_id=case_id,
             case_list=[case_data],
             temp_list=[temp_data],

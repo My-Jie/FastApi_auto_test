@@ -78,15 +78,16 @@ async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_
         project_code = await conf_crud.get_project_code(db=db, id_=temp_info[0].project_name)
         # 处理数据，执行用例
         try:
-            case, api_report = await RunApi().fo_service(
-                db=db,
-                case_id=case_id,
-                temp_data=copy.deepcopy(temp_data),
-                case_data=copy.deepcopy(case_data),
-                temp_pro=project_code,
-                temp_name=temp_info[0].temp_name,
-                setting_info_dict=setting_info_dict
-            )
+            pass
+            # case, api_report = await RunApi().fo_service(
+            #     db=db,
+            #     case_id=case_id,
+            #     temp_data=copy.deepcopy(temp_data),
+            #     case_data=copy.deepcopy(case_data),
+            #     temp_pro=project_code,
+            #     temp_name=temp_info[0].temp_name,
+            #     setting_info_dict=setting_info_dict
+            # )
         except (
                 ServerTimeoutError,
                 ServerConnectionError,

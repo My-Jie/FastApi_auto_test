@@ -9,6 +9,7 @@
 
 import re
 import jsonpath
+from aiohttp import FormData
 from typing import List
 from tools.faker_data import FakerData
 from sqlalchemy.orm import Session
@@ -50,6 +51,10 @@ async def replace_params_data(
         target = {}
         if not data_json:
             return target
+
+        if isinstance(data_json, FormData):
+            return target
+
         for key in data_json.keys():
             if isinstance(data_json[key], str):
                 target[key] = await header_srt(

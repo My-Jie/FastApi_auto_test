@@ -21,7 +21,7 @@ from apps import response_code
 from tools.check_case_json import CheckJson
 from tools import OperationJson, ExtractParamsPath, RepData, filter_number
 from tools.read_setting import setting
-from .tool import GetCaseDataInfo, check, js_count, aim
+from .tool import GetCaseDataInfo, check, jsonpath_count, aim
 
 from apps.whole_conf import crud as conf_crud
 from apps.template import crud as temp_crud
@@ -823,11 +823,10 @@ async def get_jsonpath(case_id: int, jsonpath_name: str = None, db: Session = De
     case_list = await crud.get_case_data(db=db, case_id=case_info[0].id)
     temp_list = await temp_crud.get_template_data(db=db, temp_id=case_info[0].temp_id)
 
-    data_count = js_count(
-        case_id=case_id,
+    data_count = jsonpath_count(
         case_list=case_list,
         temp_list=temp_list,
-        run_case=CASE_RESPONSE,
+        run_case=CASE_RESPONSE.get(case_id, []),
         get_temp_value=True
     )
 
