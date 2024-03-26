@@ -332,10 +332,17 @@ class ExecutorService(ApiBase):
                 api['response_info'].append(response_info)
 
                 # 断言结果
-                response_info['response']['status_code'] = res.status
+                if not isinstance(response_info['response'], (dict, list)):
+                    response_info['response'] = [{'status_code': res.status}, response_info['response']]
+                else:
+                    response_info['response']['status_code'] = res.status
+
                 result = await self._assert(check=api['check'], response=response_info['response'])
                 api['assert_info'].append(result)
-                del response_info['response']['status_code']
+                try:
+                    del response_info['response']['status_code']
+                except TypeError:
+                    response_info['response'] = response_info['response'][-1]
                 if not [x for x in result if x['result'] == 1]:  # 判断断言结果，没有失败则退出循环，不继续轮询
                     break
 
