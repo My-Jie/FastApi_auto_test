@@ -56,95 +56,61 @@ class ExtractParamsPath:
         :return:
         """
 
+        def _get_data(data_info: dict, number: int, path: str, rep_type: schemas.RepType = 'response'):
+            if key_value == schemas.KeyValueType.value:
+                value_list = cls._get_json_path(
+                    extract_contents,
+                    key_list=cls._out_function(extract_contents, data_info, ext_type),
+                    response=data_info,
+                    number=number,
+                    ext_type=ext_type,
+                    path=path,
+                    rep_type=rep_type
+                )
+            else:
+                value_list = cls._get_key_path(
+                    extract_contents,
+                    response=data_info,
+                    number=number,
+                    path=path,
+                    rep_type=rep_type
+                )
+
+            return value_list
+
         path_list = []
         for data in my_data:
             if type_ == schemas.RepType.params:
-                if key_value == schemas.KeyValueType.value:
-                    value_path_list = cls._get_json_path(
-                        extract_contents,
-                        key_list=cls._out_function(extract_contents, data.params, ext_type),
-                        response=data.params,
-                        number=data.number,
-                        ext_type=ext_type,
-                        path=data.path
-                    )
-                else:
-                    value_path_list = cls._get_key_path(
-                        extract_contents,
-                        response=data.params,
-                        number=data.number,
-                        path=data.path
-                    )
+                value_path_list = _get_data(
+                    data.params,
+                    data.number,
+                    data.path
+                )
             elif type_ == schemas.RepType.data:
-                if key_value == schemas.KeyValueType.value:
-                    value_path_list = cls._get_json_path(
-                        extract_contents,
-                        key_list=cls._out_function(extract_contents, data.data, ext_type),
-                        response=data.data,
-                        number=data.number,
-                        ext_type=ext_type,
-                        path=data.path
-                    )
-                else:
-                    value_path_list = cls._get_key_path(
-                        extract_contents,
-                        response=data.data,
-                        number=data.number,
-                        path=data.path
-                    )
+                value_path_list = _get_data(
+                    data.data,
+                    data.number,
+                    data.path
+                )
             elif type_ == schemas.RepType.headers:
-                if key_value == schemas.KeyValueType.value:
-                    value_path_list = cls._get_json_path(
-                        extract_contents,
-                        key_list=cls._out_function(extract_contents, data.headers, ext_type),
-                        response=data.headers,
-                        number=data.number,
-                        ext_type=ext_type,
-                        path=data.path
-                    )
-                else:
-                    value_path_list = cls._get_key_path(
-                        extract_contents,
-                        response=data.headers,
-                        number=data.number,
-                        path=data.path
-                    )
+                value_path_list = _get_data(
+                    data.headers,
+                    data.number,
+                    data.path
+                )
             elif type_ == schemas.RepType.response_headers:
-                if key_value == schemas.KeyValueType.value:
-                    value_path_list = cls._get_json_path(
-                        extract_contents,
-                        key_list=cls._out_function(extract_contents, data.response_headers, ext_type),
-                        response=data.response_headers,
-                        number=data.number,
-                        ext_type=ext_type,
-                        path=data.path,
-                        rep_type=schemas.RepType.response_headers
-                    )
-                else:
-                    value_path_list = cls._get_key_path(
-                        extract_contents,
-                        response=data.response_headers,
-                        number=data.number,
-                        path=data.path,
-                        rep_type=schemas.RepType.response_headers
-                    )
+                value_path_list = _get_data(
+                    data.response_headers,
+                    data.number,
+                    data.path,
+                    schemas.RepType.response_headers
+                )
             else:
-                if key_value == schemas.KeyValueType.value:
-                    value_path_list = cls._get_json_path(
-                        extract_contents,
-                        key_list=cls._out_function(extract_contents, data.response, ext_type),
-                        response=data.response,
-                        number=data.number,
-                        ext_type=ext_type,
-                        path=data.path
-                    )
-                else:
-                    value_path_list = cls._get_key_path(
-                        extract_contents,
-                        response=data.response,
-                        number=data.number,
-                        path=data.path
-                    )
+                value_path_list = _get_data(
+                    data.response,
+                    data.number,
+                    data.path
+                )
 
             path_list += value_path_list
         if type_ == schemas.RepType.response or type_ == schemas.RepType.response_headers:
