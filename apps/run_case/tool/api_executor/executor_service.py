@@ -105,6 +105,7 @@ class ExecutorService(ApiBase):
                         'description': case[1].description,
                         'json_body': 'json' if case[3].json_body == 'json' else 'data',
                         'file': case[3].file,
+                        'file_data': case[3].file_data,
                         'run_status': True  # 执行中ture， 停止false
                     },
                     'history': {
@@ -138,18 +139,6 @@ class ExecutorService(ApiBase):
                         'file': True if case[3].file else False,
                     }
                 }
-
-                # 处理附件上传
-                if case[3].file_data:
-                    files_data = FormData()
-                    for file in case[3].file_data:
-                        files_data.add_field(
-                            name=file['name'],
-                            value=base64.b64decode(file['value'].encode('utf-8')),
-                            content_type=file['contentType'],
-                            filename=file['fileName'].encode().decode('unicode_escape')
-                        )
-                    api_data['request_info']['data'] = files_data
 
                 api_list.append(api_data)
             api_group.append(api_list)
@@ -240,6 +229,18 @@ class ExecutorService(ApiBase):
                     temp_list=[],
                     run_case=api_list
                 )
+
+                # 附件较大，不保留到日志中，仅保留概要信息
+                if api['api_info']['file']:
+                    api['request_info']['data'] = [
+                        {
+                            'name': file['name'],
+                            'content_type': file['contentType'],
+                            'filename': file['fileName']
+
+                        } for file in api['api_info']['file_data']
+                    ]
+                    api['api_info']['file_data'] = []
             else:
                 report['time']['avg_time'] = report['time']['total_time'] / report['result']['run_api']
 
@@ -296,6 +297,18 @@ class ExecutorService(ApiBase):
                 api_list=api_list,
                 customize=await check_customize(self._setting_info_dict.get('customize', {})),
             )
+
+            # 处理附件上传
+            if api['api_info']['file']:
+                files_data = FormData()
+                for file in api['api_info']['file_data']:
+                    files_data.add_field(
+                        name=file['name'],
+                        value=base64.b64decode(file['value'].encode('utf-8')),
+                        content_type=file['contentType'],
+                        filename=file['fileName'].encode().decode('unicode_escape')
+                    )
+                api['request_info']['data'] = files_data
 
             # ⬜️================== 🍉轮询发起请求，单接口的默认间隔时间超过5s，每次请求间隔5s进行轮询🍉 ==================⬜️ #
             sleep = api['config']['sleep']
