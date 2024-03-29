@@ -12,44 +12,6 @@ from apps.run_case import models as queue
 from apps.case_service import models as service_case
 
 
-async def queue_add(db: Session, data: dict):
-    """
-    添加消息列队
-    :param db:
-    :param data:
-    :return:
-    """
-    db_data = queue.RunCaseQueue(**data)
-    db.add(db_data)
-    db.commit()
-    db.refresh(db_data)
-    return db_data
-
-
-async def queue_query(db: Session):
-    """
-    查询
-    :param db:
-    :return:
-    """
-    return db.query(queue.RunCaseQueue).order_by(queue.RunCaseQueue.start_time).all()
-
-
-async def queue_del(db: Session, queue_id: int = None):
-    """
-    删除输出
-    :param db:
-    :param queue_id:
-    :return:
-    """
-    if queue_id is not None:
-        db.query(queue.RunCaseQueue).filter(queue.RunCaseQueue.id == queue_id).delete()
-        db.commit()
-        return
-
-    db.query(queue.RunCaseQueue).delete()
-
-
 async def update_test_case_order(db: Session, case_id: int, is_fail: bool):
     """
     更新用例次数

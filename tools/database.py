@@ -7,23 +7,19 @@
 @Time: 2022/8/9-21:51
 """
 
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 from tools.read_setting import setting
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
-# 数据库访问地址
-DB_URL = setting['sqlite']
-
-# 启动引擎
-engine = create_engine(
-    DB_URL,
-    connect_args={"check_same_thread": False},
-    # echo=True
+# 引擎
+async_engine = create_async_engine(
+    url=setting['sqlite'],
+    # connect_args={"check_same_thread": True},
+    echo=True
 )
-# 启动会话
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=True)
-
-# 数据模型的基类
-Base = declarative_base()
-# Base.metadata.create_all(bind=engine)
+# 会话
+async_session_local = async_sessionmaker(
+    bind=async_engine,
+    class_=AsyncSession,
+    autocommit=False,
+    autoflush=False
+)

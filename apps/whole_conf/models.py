@@ -7,79 +7,66 @@
 @Time: 2023/4/16-14:42
 """
 
-from sqlalchemy import Column, Integer, JSON, DateTime, String, func
-from tools.database import Base
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import JSON, String
+from apps.base_model import Base
 
 
-class ConfHost(Base):
+class ConfBase(Base):
+    __abstract__ = True
+
+    name: Mapped[str] = mapped_column(String, index=True, comment='名称')
+
+
+class ConfHost(ConfBase):
     """
     域名列表
     """
     __tablename__ = 'conf_host'
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String, index=True, comment='名称')
-    host = Column(String, comment='域名')
 
-    created_at = Column(DateTime, server_default=func.now(), comment='创建时间')
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment='更新时间')
+    host: Mapped[str] = mapped_column(String, comment='域名')
 
 
-class ConfProject(Base):
+class ConfProject(ConfBase):
     """
     项目列表（系统列表）
     """
     __tablename__ = 'conf_project'
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String, index=True, comment='名称')
-    code = Column(String, comment='代号-编号')
 
-    created_at = Column(DateTime, server_default=func.now(), comment='创建时间')
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment='更新时间')
+    code: Mapped[str] = mapped_column(String, comment='代号-编号')
 
 
-class ConfDB(Base):
+class ConfDB(ConfBase):
     """
     数据库配置
     """
     __tablename__ = 'conf_db'
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String, index=True, comment='名称')
-    host = Column(String, comment='地址')
-    user = Column(String, comment='用户')
-    password = Column(String, comment='密码')
-    database = Column(String, comment='数据库')
-    port = Column(String, comment='端口')
-    charset = Column(String, comment='编码')
 
-    created_at = Column(DateTime, server_default=func.now(), comment='创建时间')
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment='更新时间')
+    host: Mapped[str] = mapped_column(String, comment='地址')
+    user: Mapped[str] = mapped_column(String, comment='用户')
+    password: Mapped[str] = mapped_column(String, comment='密码')
+    database: Mapped[str] = mapped_column(String, comment='数据库')
+    port: Mapped[str] = mapped_column(String, comment='端口')
+    charset: Mapped[str] = mapped_column(String, comment='编码')
 
 
-class ConfUnifyRes(Base):
+class ConfJsonObj(ConfBase):
+    __abstract__ = True
+
+    key: Mapped[str] = mapped_column(String, comment='参数名')
+    type: Mapped[str] = mapped_column(String, comment='类型')
+    value: Mapped[str] = mapped_column(JSON, comment='参数值')
+
+
+class ConfUnifyRes(ConfJsonObj):
     """
     统一响应
     """
     __tablename__ = 'conf_unify_res'
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String, index=True, comment='名称')
-    key = Column(String, comment='参数名')
-    type = Column(String, comment='类型')
-    value = Column(String, comment='参数值')
-
-    created_at = Column(DateTime, server_default=func.now(), comment='创建时间')
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment='更新时间')
 
 
-class ConfCustomize(Base):
+class ConfCustomize(ConfJsonObj):
     """
     自定义参数
     """
     __tablename__ = 'conf_customize'
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String, index=True, comment='名称')
-    key = Column(String, comment='参数名')
-    type = Column(String, comment='类型')
-    value = Column(JSON, comment='参数值')
-
-    created_at = Column(DateTime, server_default=func.now(), comment='创建时间')
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment='更新时间')

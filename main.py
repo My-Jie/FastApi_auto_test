@@ -15,9 +15,7 @@ from apps.template.router import template
 from apps.case_service.router import case_service
 from apps.case_ddt.router import case_ddt
 from apps.case_ui.router import case_ui
-from apps.api_pool.router import pool
 from apps.run_case.router import run_case
-from apps.own_params_rep.router import own_rep
 from apps.whole_conf.router import conf
 from apps.setting_bind.router import setting_
 from apps.statistic.router import statistic
@@ -27,9 +25,8 @@ from tools.load_allure import load_allure_reports
 from fastapi.staticfiles import StaticFiles
 from apps import response_code
 
-from tools.database import Base, engine
-
-Base.metadata.create_all(bind=engine)
+from tools.database import async_engine
+from apps.base_model import Base
 
 app = FastAPI(
     include_in_=True,
@@ -37,19 +34,15 @@ app = FastAPI(
 )
 
 
-@app.get('/helpInfo', name='操作概要说明', tags=['Help'])
-async def help_info():
-    return await response_code.resp_200(data={
-        'order': {
-            '/template/upload/har': '上传Charles的Har文件-先解析-再写入',
-            '/caseService/init/data/json': '下载预处理后的模板数据-Json',
-            '/template/data/list': '查询模板接口原始数据',
-            '/caseService/upload/json': '上传测试数据-Json',
-            '/runCase/': '按用例执行',
-        },
-        'description': '将模板数据Json下载下来后，通常需要对照原始数据进行jsonPath表达式进行编辑，编辑完成即可上传Json',
-        'tips': TIPS
-    })
+@app.on_event('startup')
+async def start_up():
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+
+@app.on_event('shutdown')
+async def shutdown():
+    await async_engine.dispose()
 
 
 app.include_router(template, prefix='/template', tags=['[模板]测试场景'])
@@ -57,12 +50,10 @@ app.include_router(case_service, prefix='/caseService', tags=['[用例]业务接
 app.include_router(case_ddt, prefix='/caseDdt', tags=['[用例]数据驱动'])
 app.include_router(case_ui, prefix='/caseUi', tags=['[用例]UI测试'])
 app.include_router(run_case, prefix='/runCase', tags=['执行测试'])
-app.include_router(own_rep, prefix='/ownRep', tags=['参数替换'])
 app.include_router(statistic, prefix='/statistic', tags=['数据统计'])
 app.include_router(conf, prefix='/conf', tags=['全局配置'])
 app.include_router(setting_, prefix='/setting', tags=['环境组装'])
 app.include_router(api_report, prefix='/report', tags=['接口报告'])
-app.include_router(pool, prefix='/YApi', tags=['YApi接口池'])
 app.include_router(ws_app, prefix='/ws', tags=['状态'])
 
 

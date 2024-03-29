@@ -40,7 +40,7 @@ def read_yaml() -> dict:
             pass
 
         if not conf['sqlite']:
-            conf['sqlite'] = 'sqlite:///./sqlite/auto_test.sqlite3'
+            conf['sqlite'] = 'sqlite+aiosqlite3:///./sqlite/auto_test.sqlite3'
 
     except KeyError:
         raise KeyError('配置文件读取错误，请检查 setting.yaml')

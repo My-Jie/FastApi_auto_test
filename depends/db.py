@@ -7,12 +7,13 @@
 @Time: 2022/8/11-16:36
 """
 
-from tools.database import SessionLocal
+from tools.database import async_session_local
 
 
 async def get_db():
-    db = SessionLocal()
     try:
-        yield db
+        async with async_session_local() as db:
+            yield db
     finally:
-        db.close()
+        await db.rollback()
+        await db.close()

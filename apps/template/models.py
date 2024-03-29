@@ -7,8 +7,9 @@
 @Time: 2022/8/8-10:22
 """
 
-from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, func, JSON
-from tools.database import Base
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import ForeignKey, Integer, String, JSON
+from apps.base_model import Base
 
 
 class Template(Base):
@@ -16,13 +17,10 @@ class Template(Base):
     场景模板名称，及关联的用例，测试数据
     """
     __tablename__ = 'case_template'
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    project_name = Column(Integer, nullable=True, index=True, comment='项目名称ID')
-    temp_name = Column(String, unique=True, nullable=True, index=True, comment='场景名称')
-    api_count = Column(Integer, default=0, nullable=True, comment='接口数量')
 
-    created_at = Column(DateTime, server_default=func.now(), comment='创建时间')
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment='更新时间')
+    sys_name: Mapped[int] = mapped_column(Integer, nullable=True, index=True, comment='系统名称')
+    temp_name: Mapped[str] = mapped_column(String, unique=True, nullable=True, index=True, comment='场景名称')
+    api_count: Mapped[int] = mapped_column(Integer, default=0, nullable=True, comment='接口数量')
 
 
 class TemplateData(Base):
@@ -30,22 +28,19 @@ class TemplateData(Base):
     场景数据列表
     """
     __tablename__ = 'case_template_data'
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    temp_id = Column(Integer, ForeignKey('case_template.id'))
-    number = Column(Integer, nullable=False, comment='序号')
-    host = Column(String, nullable=False, comment='域名')
-    path = Column(String, nullable=False, index=True, comment='接口路径')
-    code = Column(Integer, nullable=False, comment='响应状态码')
-    method = Column(String, nullable=False, comment='请求方法')
-    params = Column(JSON, comment='请求参数数据')
-    json_body = Column(String, nullable=False, comment='json格式/表单格式')
-    data = Column(JSON, comment='json/表单 数据')
-    file = Column(Integer, default=0, comment='是否有附件')
-    file_data = Column(JSON, comment='文件数据')
-    headers = Column(JSON, comment='请求头')
-    response = Column(JSON, comment='响应数据')
-    response_headers = Column(JSON, comment='响应请求头')
-    description = Column(String, comment='用例描述')
 
-    created_at = Column(DateTime, server_default=func.now(), comment='创建时间')
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment='更新时间')
+    temp_id: Mapped[int] = mapped_column(Integer, ForeignKey('case_template.id'), index=True, comment='模板id')
+    number: Mapped[int] = mapped_column(Integer, nullable=False, comment='序号')
+    host: Mapped[str] = mapped_column(String, nullable=False, comment='域名')
+    path: Mapped[str] = mapped_column(String, nullable=False, index=True, comment='接口路径')
+    code: Mapped[int] = mapped_column(Integer, nullable=False, comment='响应状态码')
+    method: Mapped[str] = mapped_column(String, nullable=False, comment='请求方法')
+    json_body: Mapped[str] = mapped_column(String, nullable=False, comment='json格式/表单格式')
+    params: Mapped[dict] = mapped_column(JSON, comment='请求参数数据')
+    data: Mapped[dict] = mapped_column(JSON, comment='json/表单 数据')
+    file: Mapped[int] = mapped_column(Integer, default=0, comment='是否有附件')
+    file_data: Mapped[dict] = mapped_column(JSON, comment='文件数据')
+    headers: Mapped[dict] = mapped_column(JSON, comment='请求头')
+    response: Mapped[dict] = mapped_column(JSON, comment='响应数据')
+    response_headers: Mapped[dict] = mapped_column(JSON, comment='响应请求头')
+    description: Mapped[str] = mapped_column(String, comment='用例描述')

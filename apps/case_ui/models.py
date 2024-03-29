@@ -7,8 +7,9 @@
 @Time: 2023/6/9-16:30
 """
 
-from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, func, Text, JSON
-from tools.database import Base
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import ForeignKey, Integer, String, Text, JSON
+from apps.base_model import Base
 
 
 class PlaywrightTemp(Base):
@@ -16,17 +17,15 @@ class PlaywrightTemp(Base):
     用例名称表
     """
     __tablename__ = 'playwright_temp'
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    project_name = Column(Integer, nullable=True, index=True, comment='系统名称')
-    temp_name = Column(String, nullable=True, index=True, comment='模板名称')
-    rows = Column(Integer, default=0, nullable=True, comment='行数')
-    run_order = Column(Integer, default=0, nullable=True, comment='执行次数')
-    success = Column(Integer, default=0, nullable=True, comment='成功次数')
-    fail = Column(Integer, default=0, nullable=True, comment='失败次数')
-    text = Column(Text, default=0, nullable=True, comment='py文件内容')
 
-    created_at = Column(DateTime, server_default=func.now(), comment='创建时间')
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment='更新时间')
+    # project_name = Column(Integer, nullable=True, index=True, comment='系统名称')
+    sys_name: Mapped[int] = mapped_column(Integer, nullable=True, index=True, comment='系统名称')
+    temp_name: Mapped[str] = mapped_column(String, nullable=True, index=True, comment='模板名称')
+    rows: Mapped[int] = mapped_column(Integer, default=0, nullable=True, comment='行数')
+    run_order: Mapped[int] = mapped_column(Integer, default=0, nullable=True, comment='执行次数')
+    success: Mapped[int] = mapped_column(Integer, default=0, nullable=True, comment='成功次数')
+    fail: Mapped[int] = mapped_column(Integer, default=0, nullable=True, comment='失败次数')
+    text: Mapped[str] = mapped_column(Text, default=0, nullable=True, comment='py文件内容')
 
 
 class PlaywrightCaseDate(Base):
@@ -34,10 +33,7 @@ class PlaywrightCaseDate(Base):
     测试数据
     """
     __tablename__ = 'playwright_case_data'
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    temp_id = Column(Integer, ForeignKey('playwright_temp.id'))
-    case_name = Column(String, nullable=True, index=True, comment='用例名称')
-    rows_data = Column(JSON, comment='测试数据')
 
-    created_at = Column(DateTime, server_default=func.now(), comment='创建时间')
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment='更新时间')
+    temp_id: Mapped[int] = mapped_column(Integer, ForeignKey('playwright_temp.id'), index=True, comment='模板id')
+    case_name: Mapped[str] = mapped_column(String, nullable=True, index=True, comment='用例名称')
+    rows_data: Mapped[dict] = mapped_column(JSON, comment='测试数据')

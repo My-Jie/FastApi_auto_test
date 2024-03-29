@@ -18,7 +18,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-from tools.database import Base
+from apps.base_model import Base
 
 # 需要在这里导入项目所有的数据库模型，不然会被删除掉，有点坑
 from apps.template.models import Template, TemplateData
@@ -27,8 +27,6 @@ from apps.case_ui.models import PlaywrightTemp, PlaywrightCaseDate
 from apps.case_ddt.models import TestGather
 from apps.whole_conf.models import ConfHost, ConfProject, ConfDB, ConfUnifyRes, ConfCustomize
 from apps.setting_bind.models import SettingSet
-from apps.api_pool.models import YAoiProject, YApiPool
-from apps.run_case.models import RunCaseQueue
 from apps.api_report.models import ApiReportList, ApiReportDetail
 
 target_metadata = Base.metadata
