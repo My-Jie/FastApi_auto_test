@@ -337,18 +337,20 @@ async def get_case(db: AsyncSession, temp_id: int):
     return result.scalars().all()
 
 
-async def get_case_ids(db: AsyncSession, temp_id: int):
+async def get_case_ids(db: AsyncSession, temp_ids: List[int]):
     """
     按模板查用例id
     :param db:
-    :param temp_id:
+    :param temp_ids:
     :return:
     """
     result = await db.execute(
-        select(models.TestCase.id).filter(models.TestCase.temp_id == temp_id).order_by(models.TestCase.id)
+        select(models.TestCase.temp_id, models.TestCase.id).filter(
+            models.TestCase.temp_id.in_(temp_ids)
+        ).order_by(models.TestCase.temp_id)
     )
 
-    return result.scalars().all()
+    return result.all()
 
 
 async def get_urls(db: AsyncSession, url: str):

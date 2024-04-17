@@ -70,27 +70,27 @@ async def run_case_name(ids: schemas.RunCase, db: AsyncSession = Depends(get_db)
     description='按模板ID查询出关联的用例，再异步执行所有用例，收集结果集'
 )
 async def run_case_name(ids: schemas.RunTemp, db: AsyncSession = Depends(get_db)):
-    case_list = [await case_crud.get_case_ids(db=db, temp_id=x) for x in ids.temp_ids]
+    case_list = await case_crud.get_case_ids(db=db, temp_ids=ids.temp_ids)
 
-    all_case_list = []
-    temp_info = {}
-    for x in range(len(case_list)):
-        temp_info[ids.temp_ids[x]] = [i[0] for i in case_list[x]]
-        for y in case_list[x]:
-            all_case_list.append(y[0])
-
-    if not all_case_list:
+    if not case_list:
         return await response_code.resp_400()
+
+    temp_info = {}
+    for x in case_list:
+        if temp_info.get(x[0]):
+            temp_info[x[0]].append(x[1])
+        else:
+            temp_info[x[0]] = [x[1]]
 
     # 按模板并发
     tasks = [
         asyncio.create_task(
             run_service_case(
                 db=db,
-                case_ids=[case_id],
+                case_ids=[case_id[1]],
                 setting_info_dict={}
             )
-        ) for case_id in all_case_list
+        ) for case_id in case_list
     ]
     case_info = await asyncio.gather(*tasks)
 
