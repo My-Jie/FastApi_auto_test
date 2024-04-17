@@ -15,7 +15,8 @@ w3lib
 # ddddocr~=1.4.7
 aiomysql~=0.0.21
 fastapi-pagination~=0.12.1
-SQLAlchemy~=1.4.0
+SQLAlchemy~=2.0.29
+aiosqlite~=0.20.0
 urllib3~=2.0.3
 selenium~=4.10.0
 playwright~=1.37.0
