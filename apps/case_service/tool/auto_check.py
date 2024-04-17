@@ -7,11 +7,11 @@
 @Time: 2023/6/23-21:59
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from apps.whole_conf import crud as conf_crud
 
 
-async def my_auto_check(db: Session) -> dict:
+async def my_auto_check(db: AsyncSession) -> dict:
     conf = await conf_crud.get_unify_res(db=db)
     auto_check = {}
     for x in conf:

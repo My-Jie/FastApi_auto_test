@@ -8,14 +8,9 @@
 @Date    ：2023/11/27 13:49 
 """
 
-import base64
-from aiohttp import FormData
-# from apps.template import schemas as temp
-# from apps.case_service import schemas as service
 from tools import replace_data
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from tools.faker_data import FakerData
-from .handle_headers import replace_headers
 
 
 class DataProcessing:
@@ -25,7 +20,7 @@ class DataProcessing:
 
     def __init__(
             self,
-            db: Session,
+            db: AsyncSession,
             code: str = None,
             extract: str = None,
     ):
@@ -111,49 +106,3 @@ class DataProcessing:
             extract=self.extract,
             customize=customize
         )
-
-
-def req_info(
-        url: str,
-        params: dict,
-        data: dict,
-        case_header: dict,
-        temp_data,
-        cookies: dict,
-):
-    """
-    接口请求前，处理request信息
-    :param url:
-    :param params:
-    :param data:
-    :param case_header:
-    :param temp_data:
-    :param cookies:
-    :return:
-    """
-    request_info = {
-        'url': url,
-        'method': temp_data.method,
-        'headers': replace_headers(  # 替换headers中的内容
-            cookies=cookies,
-            tmp_header=temp_data.headers,
-            case_header=case_header,
-            tmp_host=temp_data.host,
-            tmp_file=temp_data.file
-        ),
-        'params': params,
-        f"{'json' if temp_data.json_body == 'json' else 'data'}": data,
-    }
-
-    if temp_data.file_data:
-        files_data = FormData()
-        for file in temp_data.file_data:
-            files_data.add_field(
-                name=file['name'],
-                value=base64.b64decode(file['value'].encode('utf-8')),
-                content_type=file['contentType'],
-                filename=file['fileName'].encode().decode('unicode_escape')
-            )
-        request_info['data'] = files_data
-
-    return request_info

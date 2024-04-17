@@ -13,8 +13,7 @@ import copy
 import random
 import asyncio
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from typing import List
+from sqlalchemy.ext.asyncio import AsyncSession
 from depends import get_db
 from starlette.background import BackgroundTask
 from apps import response_code
@@ -41,7 +40,7 @@ SETTING_LIST = {}
     name='按用例Id执行',
     description='按用例ID的顺序执行'
 )
-async def run_case_name(ids: schemas.RunCase, db: Session = Depends(get_db)):
+async def run_case_name(ids: schemas.RunCase, db: AsyncSession = Depends(get_db)):
     if not ids.case_ids:
         return await response_code.resp_400()
 
@@ -70,7 +69,7 @@ async def run_case_name(ids: schemas.RunCase, db: Session = Depends(get_db)):
     name='按模板Id执行',
     description='按模板ID查询出关联的用例，再异步执行所有用例，收集结果集'
 )
-async def run_case_name(ids: schemas.RunTemp, db: Session = Depends(get_db)):
+async def run_case_name(ids: schemas.RunTemp, db: AsyncSession = Depends(get_db)):
     case_list = [await case_crud.get_case_ids(db=db, temp_id=x) for x in ids.temp_ids]
 
     all_case_list = []
@@ -107,7 +106,7 @@ async def run_case_name(ids: schemas.RunTemp, db: Session = Depends(get_db)):
     name='选择数据集执行用例',
     response_class=response_code.MyJSONResponse,
 )
-async def run_case_gather(rcs: schemas.RunCaseGather, db: Session = Depends(get_db)):
+async def run_case_gather(rcs: schemas.RunCaseGather, db: AsyncSession = Depends(get_db)):
     """
     按数据集执行用例
     """
@@ -164,7 +163,7 @@ async def run_case_gather(rcs: schemas.RunCaseGather, db: Session = Depends(get_
     '/ui/temp',
     name='执行ui脚本用例',
 )
-async def ui_temp(rut: schemas.RunUiTemp, db: Session = Depends(get_db)):
+async def ui_temp(rut: schemas.RunUiTemp, db: AsyncSession = Depends(get_db)):
     """
     执行ui脚本用例
     """
@@ -207,7 +206,7 @@ async def ui_temp(rut: schemas.RunUiTemp, db: Session = Depends(get_db)):
     '/ui/gather',
     name='执行ui用例集'
 )
-async def ui_gather(rut: schemas.RunUiTempGather, db: Session = Depends(get_db)):
+async def ui_gather(rut: schemas.RunUiTempGather, db: AsyncSession = Depends(get_db)):
     """
     执行ui用例集，可异步可同步
     """
@@ -312,7 +311,7 @@ async def case_status(key_id: str = None):
     '/get/api/setting/info',
     name='获取api用例绑定的环境配置信息'
 )
-async def get_api_setting_info(case_id: int, db: Session = Depends(get_db)):
+async def get_api_setting_info(case_id: int, db: AsyncSession = Depends(get_db)):
     """
     获取api用例绑定的环境配置信息
     """
@@ -394,7 +393,7 @@ async def get_api_setting_info(case_id: int, db: Session = Depends(get_db)):
     '/get/ui/setting/info',
     name='获取ui用例绑定的环境配置信息'
 )
-async def get_ui_setting_info(case_id: int, db: Session = Depends(get_db)):
+async def get_ui_setting_info(case_id: int, db: AsyncSession = Depends(get_db)):
     """
     获取ui用例绑定的环境配置信息
     """

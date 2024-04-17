@@ -8,11 +8,11 @@
 @Date    ：2023/12/29 14:11 
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from apps.case_service import crud
 
 
-async def aim(db: Session, case_id: int, json_str: dict):
+async def aim(db: AsyncSession, case_id: int, json_str: dict):
     json_list = []
     if json_str['path']:
         json_list += await __to_json(

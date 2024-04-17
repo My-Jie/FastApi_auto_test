@@ -7,7 +7,6 @@
 @Time: 2022/8/23-14:33
 """
 
-from .run_api import RunApi
 from .run_pytest import run, allure_generate
 from .handle_gatehr import handle
 from .run_ui import run_ui

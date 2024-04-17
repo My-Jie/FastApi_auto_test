@@ -9,7 +9,7 @@
 
 from typing import List
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from apps.setting_bind import crud, schemas
 from apps import response_code
 from depends import get_db
@@ -33,7 +33,7 @@ setting_ = APIRouter()
     name='添加环境数据',
     response_model=schemas.SettingSetOut
 )
-async def add_setting(setting: schemas.SettingSetIn, db: Session = Depends(get_db)):
+async def add_setting(setting: schemas.SettingSetIn, db: AsyncSession = Depends(get_db)):
     if await crud.get_setting(db=db, name=setting.name):
         return await response_code.resp_400(message='存在相同的name')
 
@@ -45,7 +45,7 @@ async def add_setting(setting: schemas.SettingSetIn, db: Session = Depends(get_d
     name='获取环境数据',
     response_model=List[schemas.SettingSetOut]
 )
-async def get_setting(setting_id: int = None, db: Session = Depends(get_db)):
+async def get_setting(setting_id: int = None, db: AsyncSession = Depends(get_db)):
     return await crud.get_setting(db=db, id_=setting_id)
 
 
@@ -54,7 +54,7 @@ async def get_setting(setting_id: int = None, db: Session = Depends(get_db)):
     name='修改环境名称',
     response_model=schemas.SettingSetOut
 )
-async def update_setting(setting_id: int, name: str, db: Session = Depends(get_db)):
+async def update_setting(setting_id: int, name: str, db: AsyncSession = Depends(get_db)):
     if not await crud.get_setting(db=db, id_=setting_id):
         return await response_code.resp_400()
 
@@ -74,7 +74,7 @@ async def update_setting(
         host: int = None,
         customize: int = None,
         db_: int = None,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     setting_info = await crud.get_setting(db=db, id_=setting_id)
     if not setting_info:
@@ -102,7 +102,7 @@ async def update_setting(
     '/del/setting',
     name='删除环境数据'
 )
-async def del_setting(setting_id: int, db: Session = Depends(get_db)):
+async def del_setting(setting_id: int, db: AsyncSession = Depends(get_db)):
     if not await crud.get_setting(db=db, id_=setting_id):
         return await response_code.resp_400()
 
@@ -119,7 +119,7 @@ async def del_setting(setting_id: int, db: Session = Depends(get_db)):
     '/get/case/api',
     name='获取api用例的绑定信息'
 )
-async def get_case_api(setting_id: int, page: int = 1, size: int = 1000, db: Session = Depends(get_db)):
+async def get_case_api(setting_id: int, page: int = 1, size: int = 1000, db: AsyncSession = Depends(get_db)):
     # 获取到用例信息
     test_case = await api_crud.get_case_info(db=db, page=page, size=size)
 
@@ -148,7 +148,7 @@ async def get_case_api(setting_id: int, page: int = 1, size: int = 1000, db: Ses
     '/get/case/ui',
     name='获取ui用例的绑定信息'
 )
-async def get_case_ui(setting_id: int, page: int = 1, size: int = 1000, db: Session = Depends(get_db)):
+async def get_case_ui(setting_id: int, page: int = 1, size: int = 1000, db: AsyncSession = Depends(get_db)):
     # 获取到用例信息
     test_case = await ui_crud.get_playwright(db=db, page=page, size=size)
 
@@ -175,7 +175,7 @@ async def get_case_ui(setting_id: int, page: int = 1, size: int = 1000, db: Sess
     '/get/host',
     name='获取host的绑定信息'
 )
-async def get_host(setting_id: int, db: Session = Depends(get_db)):
+async def get_host(setting_id: int, db: AsyncSession = Depends(get_db)):
     # 获取到用例信息
     host_info = await conf_crud.get_host(db=db)
 
@@ -203,7 +203,7 @@ async def get_host(setting_id: int, db: Session = Depends(get_db)):
     '/get/customize',
     name='获取customize的绑定信息'
 )
-async def get_customize(setting_id: int, db: Session = Depends(get_db)):
+async def get_customize(setting_id: int, db: AsyncSession = Depends(get_db)):
     # 获取到用例信息
     customize_info = await conf_crud.get_customize(db=db)
 
@@ -233,7 +233,7 @@ async def get_customize(setting_id: int, db: Session = Depends(get_db)):
     '/get/db',
     name='获取db的绑定信息'
 )
-async def get_db_(setting_id: int, db: Session = Depends(get_db)):
+async def get_db_(setting_id: int, db: AsyncSession = Depends(get_db)):
     # 获取到用例信息
     db_info = await conf_crud.get_db(db=db)
 

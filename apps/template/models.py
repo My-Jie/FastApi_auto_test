@@ -18,7 +18,7 @@ class Template(Base):
     """
     __tablename__ = 'case_template'
 
-    sys_name: Mapped[int] = mapped_column(Integer, nullable=True, index=True, comment='系统名称')
+    project_name: Mapped[int] = mapped_column(Integer, nullable=True, index=True, comment='系统名称')
     temp_name: Mapped[str] = mapped_column(String, unique=True, nullable=True, index=True, comment='场景名称')
     api_count: Mapped[int] = mapped_column(Integer, default=0, nullable=True, comment='接口数量')
 

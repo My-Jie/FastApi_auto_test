@@ -9,7 +9,8 @@
 
 import os
 import time
-from sqlalchemy.orm import Session
+# from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from fastapi import APIRouter, UploadFile, Depends
 from starlette.responses import FileResponse
@@ -29,7 +30,7 @@ case_ddt = APIRouter()
     '/down/data/gather',
     name='测试数据集下载-Excel'
 )
-async def down_data_gather(case_id: int, db: Session = Depends(get_db)):
+async def down_data_gather(case_id: int, db: AsyncSession = Depends(get_db)):
     """
     测试数据集下载，数据集模板下载
     """
@@ -65,7 +66,7 @@ async def down_data_gather(case_id: int, db: Session = Depends(get_db)):
 async def upload_data_gather(
         case_id: int,
         file: UploadFile,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     测试数据集上传
@@ -99,7 +100,7 @@ async def upload_data_gather(
     response_model=List[schemas.TestGraterOut],
     response_class=response_code.MyJSONResponse,
 )
-async def get_data_gather(case_id: int, db: Session = Depends(get_db)):
+async def get_data_gather(case_id: int, db: AsyncSession = Depends(get_db)):
     """
     获取数据集数据
     """
@@ -110,6 +111,6 @@ async def get_data_gather(case_id: int, db: Session = Depends(get_db)):
     '/del/gather',
     name='删除数据集'
 )
-async def del_gather(dg: schemas.DelGrater, db: Session = Depends(get_db)):
+async def del_gather(dg: schemas.DelGrater, db: AsyncSession = Depends(get_db)):
     await crud.del_test_gather(db=db, case_id=dg.case_id, suite=dg.suite)
     return await response_code.resp_200()

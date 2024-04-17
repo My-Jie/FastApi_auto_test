@@ -7,40 +7,51 @@
 @Time: 2023/7/27-16:06
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select, delete
+from sqlalchemy.ext.asyncio import AsyncSession
 from apps.setting_bind import models, schemas
 from sqlalchemy.orm.attributes import flag_modified
 
 
-async def create_setting(db: Session, setting: schemas.SettingSetIn):
+async def create_setting(db: AsyncSession, setting: schemas.SettingSetIn):
     db_info = models.SettingSet(**setting.dict())
     db.add(db_info)
-    db.commit()
-    db.refresh(db_info)
+    await db.commit()
+    await db.refresh(db_info)
     return db_info
 
 
-async def get_setting(db: Session, id_: int = None, name: str = None):
+async def get_setting(db: AsyncSession, id_: int = None, name: str = None):
     if id_:
-        return db.query(models.SettingSet).filter(models.SettingSet.id == id_).all()
+        result = await db.execute(
+            select(models.SettingSet).filter(models.SettingSet.id == id_)
+        )
+        return result.scalars().all()
 
     if name:
-        return db.query(models.SettingSet).filter(models.SettingSet.name == name).all()
+        result = await db.execute(
+            select(models.SettingSet).filter(models.SettingSet.name == name)
+        )
+        return result.scalars().all()
 
-    return db.query(models.SettingSet).all()
+    result = await db.execute(select(models.SettingSet))
+    return result.scalars().all()
 
 
-async def update_setting_name(db: Session, id_: int, name: str):
-    db_info = db.query(models.SettingSet).filter(models.SettingSet.id == id_).first()
+async def update_setting_name(db: AsyncSession, id_: int, name: str):
+    result = await db.execute(
+        select(models.SettingSet).filter(models.SettingSet.id == id_)
+    )
+    db_info = result.scalars().first()
     if db_info:
         db_info.name = name
-        db.commit()
-        db.refresh(db_info)
+        await db.commit()
+        await db.refresh(db_info)
         return db_info
 
 
 async def update_setting_bind(
-        db: Session, id_: int,
+        db: AsyncSession, id_: int,
         bind: bool,
         api_case: int = None,
         ui_case: int = None,
@@ -48,9 +59,10 @@ async def update_setting_bind(
         customize: int = None,
         db_: int = None,
 ):
-    db_temp = db.query(models.SettingSet).filter(
-        models.SettingSet.id == id_,
-    ).first()
+    result = await db.execute(
+        select(models.SettingSet).filter(models.SettingSet.id == id_)
+    )
+    db_temp = result.scalars().first()
 
     if db_temp:
         if api_case is not None:
@@ -69,13 +81,13 @@ async def update_setting_bind(
             db_temp.db_ids.append(db_) if bind else db_temp.db_ids.remove(db_)
             flag_modified(db_temp, "db_ids")
 
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
 
 
-async def del_setting(db: Session, id_: int):
-    db.query(models.SettingSet).filter(
-        models.SettingSet.id == id_,
-    ).delete()
-    db.commit()
+async def del_setting(db: AsyncSession, id_: int):
+    await db.execute(
+        delete(models.SettingSet).where(models.SettingSet.id == id_)
+    )
+    await db.commit()

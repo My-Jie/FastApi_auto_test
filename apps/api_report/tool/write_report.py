@@ -7,12 +7,12 @@
 @Time: 2023/10/25-11:36
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api_report import schemas, crud
 from apps.run_case import crud as run_crud
 
 
-async def write_api_report(db: Session, api_report: dict, api_detail: list):
+async def write_api_report(db: AsyncSession, api_report: dict, api_detail: list):
     """
     写入数据到测试报告中
     :param db:

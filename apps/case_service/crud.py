@@ -9,14 +9,14 @@
 
 import datetime
 from tools import rep_value, rep_url
-from sqlalchemy import func
+from sqlalchemy import func, select, delete, update
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.orm import Session
 from apps.case_service import models, schemas
 from typing import List
 
 
-async def create_test_case(db: Session, case_name: str, mode: str, temp_id: int):
+async def create_test_case(db: AsyncSession, case_name: str, mode: str, temp_id: int):
     """
     创建测试数据
     :param db:
@@ -27,12 +27,12 @@ async def create_test_case(db: Session, case_name: str, mode: str, temp_id: int)
     """
     db_case = models.TestCase(case_name=case_name, mode=mode, temp_id=temp_id)
     db.add(db_case)
-    db.commit()
-    db.refresh(db_case)
+    await db.commit()
+    await db.refresh(db_case)
     return db_case
 
 
-async def update_test_case(db: Session, case_id: int, case_count: int = None):
+async def update_test_case(db: AsyncSession, case_id: int, case_count: int = None):
     """
     更新测试信息
     :param db:
@@ -40,15 +40,18 @@ async def update_test_case(db: Session, case_id: int, case_count: int = None):
     :param case_count:
     :return:
     """
-    db_temp = db.query(models.TestCase).filter(models.TestCase.id == case_id).first()
+    result = await db.execute(
+        select(models.TestCase).filter(models.TestCase.id == case_id)
+    )
+    db_temp = result.scalars().first()
     if db_temp:
         db_temp.case_count = case_count
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
 
 
-async def create_test_case_data(db: Session, data: schemas.TestCaseDataIn, case_id: int):
+async def create_test_case_data(db: AsyncSession, data: schemas.TestCaseDataIn, case_id: int):
     """
     创建测试数据集
     :param db:
@@ -58,12 +61,12 @@ async def create_test_case_data(db: Session, data: schemas.TestCaseDataIn, case_
     """
     db_data = models.TestCaseData(**data.dict(), case_id=case_id)
     db.add(db_data)
-    # db.commit()
-    # db.refresh(db_data)
+    await db.commit()
+    await db.refresh(db_data)
     return db_data
 
 
-async def create_test_case_data_add(db: Session, data: schemas.TestCaseDataInTwo):
+async def create_test_case_data_add(db: AsyncSession, data: schemas.TestCaseDataInTwo):
     """
     创建测试数据集
     :param db:
@@ -72,12 +75,12 @@ async def create_test_case_data_add(db: Session, data: schemas.TestCaseDataInTwo
     """
     db_data = models.TestCaseData(**data.dict())
     db.add(db_data)
-    db.commit()
-    db.refresh(db_data)
+    await db.commit()
+    await db.refresh(db_data)
     return db_data
 
 
-async def del_test_case_data(db: Session, case_id: int, number: int = None):
+async def del_test_case_data(db: AsyncSession, case_id: int, number: int = None):
     """
     删除测试数据，不删除用例
     :param db:
@@ -86,19 +89,25 @@ async def del_test_case_data(db: Session, case_id: int, number: int = None):
     :return:
     """
     if number:
-        db.query(models.TestCaseData).filter(
-            models.TestCaseData.case_id == case_id,
-            models.TestCaseData.number == number
-        ).delete()
-        db.commit()
+        await db.execute(
+            delete(
+                models.TestCaseData
+            ).where(
+                models.TestCaseData.case_id == case_id,
+                models.TestCaseData.number == number
+            )
+        )
+        await db.commit()
         return
 
-    db.query(models.TestCaseData).filter(models.TestCaseData.case_id == case_id).delete()
-    db.commit()
+    await db.execute(
+        delete(models.TestCaseData).where(models.TestCaseData.case_id == case_id)
+    )
+    await db.commit()
 
 
 async def get_case_info(
-        db: Session,
+        db: AsyncSession,
         case_name: str = None,
         case_id: int = None,
         all_: bool = False,
@@ -116,22 +125,34 @@ async def get_case_info(
     :return:
     """
     if case_id is not None:
-        return db.query(models.TestCase).filter(models.TestCase.id == case_id).order_by(models.TestCase.id.desc()).all()
+        result = await db.execute(
+            select(models.TestCase).filter(models.TestCase.id == case_id).order_by(models.TestCase.id.desc())
+        )
+        return result.scalars().all()
 
     if case_name:
-        return db.query(models.TestCase).filter(
-            models.TestCase.case_name.like(f"%{case_name}%"),
-        ).order_by(
-            models.TestCase.id.desc()
-        ).offset(size * (page - 1)).limit(size)
+        result = await db.execute(
+            select(models.TestCase).filter(
+                models.TestCase.case_name.like(f"%{case_name}%")
+            ).order_by(
+                models.TestCase.id.desc()).offset(size * (page - 1)).limit(size)
+        )
+        return result.scalars().all()
+
     if all_:
-        return db.query(models.TestCase).order_by(models.TestCase.id.desc()).all()
+        result = await db.execute(
+            select(models.TestCase).order_by(models.TestCase.id.desc())
+        )
+        return result.scalars().all()
 
     if page and size:
-        return db.query(models.TestCase).order_by(models.TestCase.id.desc()).offset(size * (page - 1)).limit(size)
+        result = await db.execute(
+            select(models.TestCase).order_by(models.TestCase.id.desc()).offset(size * (page - 1)).limit(size)
+        )
+        return result.scalars().all()
 
 
-async def get_case_data(db: Session, case_id: int, number: int = None):
+async def get_case_data(db: AsyncSession, case_id: int, number: int = None):
     """
     查询测试用例数据
     :param db:
@@ -141,20 +162,25 @@ async def get_case_data(db: Session, case_id: int, number: int = None):
     """
 
     if number:
-        return db.query(models.TestCaseData).filter(
-            models.TestCaseData.case_id == case_id,
-            models.TestCaseData.number == number
-        ).order_by(
-            models.TestCaseData.number
-        ).all()
+        result = await db.execute(
+            select(models.TestCaseData).filter(
+                models.TestCaseData.case_id == case_id,
+                models.TestCaseData.number == number
+            ).order_by(
+                models.TestCaseData.number
+            )
+        )
+        return result.scalars().all()
     else:
-        return db.query(models.TestCaseData).filter(models.TestCaseData.case_id == case_id).order_by(
-            models.TestCaseData.number
-        ).all()
+        result = await db.execute(
+            select(models.TestCaseData).filter(models.TestCaseData.case_id == case_id).order_by(
+                models.TestCaseData.number
+            ))
+        return result.scalars().all()
 
 
 async def set_case_info(
-        db: Session,
+        db: AsyncSession,
         case_id: int,
         number: int,
         config: dict = None,
@@ -166,10 +192,13 @@ async def set_case_info(
     """
     更新用例的数据
     """
-    db_temp = db.query(models.TestCaseData).filter(
-        models.TestCaseData.case_id == case_id,
-        models.TestCaseData.number == number,
-    ).first()
+    result = await db.execute(
+        select(models.TestCaseData).filter(
+            models.TestCaseData.case_id == case_id,
+            models.TestCaseData.number == number,
+        )
+    )
+    db_temp = result.scalars().first()
 
     if db_temp:
         if config is not None:
@@ -194,12 +223,12 @@ async def set_case_info(
             db_temp.headers = headers
             flag_modified(db_temp, "headers")
 
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
 
 
-async def set_case_description(db: Session, case_id: int, number: int, description: str):
+async def set_case_description(db: AsyncSession, case_id: int, number: int, description: str):
     """
     设置用例描述信息
     :param db:
@@ -208,20 +237,23 @@ async def set_case_description(db: Session, case_id: int, number: int, descripti
     :param description:
     :return:
     """
-    db_temp = db.query(models.TestCaseData).filter(
-        models.TestCaseData.case_id == case_id,
-        models.TestCaseData.number == number,
-    ).first()
+    result = await db.execute(
+        select(models.TestCaseData).filter(
+            models.TestCaseData.case_id == case_id,
+            models.TestCaseData.number == number,
+        )
+    )
+    db_temp = result.scalars().first()
 
     if db_temp:
         db_temp.description = description
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
 
 
 async def set_case_data(
-        db: Session,
+        db: AsyncSession,
         case_id: int,
         number: int,
         old_data: str,
@@ -238,85 +270,103 @@ async def set_case_data(
     :param type_:
     :return:
     """
-    db_temp = db.query(models.TestCaseData).filter(
-        models.TestCaseData.case_id == case_id,
-        models.TestCaseData.number == number,
-    ).first()
+
+    result = await db.execute(
+        select(models.TestCaseData).filter(
+            models.TestCaseData.case_id == case_id,
+            models.TestCaseData.number == number,
+        )
+    )
+    db_temp = result.scalars().first()
 
     if type_ == 'data':
         new_json = rep_value(json_data=db_temp.data, old_str=old_data, new_str=new_data)
         db_temp.data = new_json
         flag_modified(db_temp, "data")
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
     elif type_ == 'params':
         new_json = rep_value(json_data=db_temp.params, old_str=old_data, new_str=new_data)
         db_temp.params = new_json
         flag_modified(db_temp, "params")
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
     elif type_ == 'headers':
         new_json = rep_value(json_data=db_temp.headers, old_str=old_data, new_str=new_data)
         db_temp.headers = new_json
         flag_modified(db_temp, "headers")
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
     else:
         new_url = rep_url(url=db_temp.path, old_str=old_data, new_str=new_data)
         db_temp.path = new_url
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
 
 
-async def del_case_data(db: Session, case_id: int):
+async def del_case_data(db: AsyncSession, case_id: int):
     """
     删除测试数据
     :param db:
     :param case_id:
     :return:
     """
-    db.query(models.TestCase).filter(models.TestCase.id == case_id).delete()
-    db.query(models.TestCaseData).filter(models.TestCaseData.case_id == case_id).delete()
-    db.commit()
+    await db.execute(
+        delete(models.TestCase).where(models.TestCase.id == case_id)
+    )
+    await db.execute(
+        delete(models.TestCaseData).where(models.TestCaseData.case_id == case_id)
+    )
+    await db.commit()
 
 
-async def get_case(db: Session, temp_id: int):
+async def get_case(db: AsyncSession, temp_id: int):
     """
     按模板查用例
     :param db:
     :param temp_id:
     :return:
     """
-    return db.query(models.TestCase).filter(models.TestCase.temp_id == temp_id).all()
+    result = await db.execute(
+        select(models.TestCase).filter(models.TestCase.temp_id == temp_id)
+    )
+    return result.scalars().all()
 
 
-async def get_case_ids(db: Session, temp_id: int):
+async def get_case_ids(db: AsyncSession, temp_id: int):
     """
     按模板查用例id
     :param db:
     :param temp_id:
     :return:
     """
-    return db.query(models.TestCase.id).filter(models.TestCase.temp_id == temp_id).order_by(models.TestCase.id).all()
+    result = await db.execute(
+        select(models.TestCase.id).filter(models.TestCase.temp_id == temp_id).order_by(models.TestCase.id)
+    )
+
+    return result.scalars().all()
 
 
-async def get_urls(db: Session, url: str):
+async def get_urls(db: AsyncSession, url: str):
     """
     模糊查询url
     :param db:
     :param url:
     :return:
     """
-    return db.query(models.TestCaseData).filter(models.TestCaseData.path.like(f"{url}%")).order_by(
-        models.TestCaseData.number
-    ).all()
+    result = await db.execute(
+        select(models.TestCaseData).filter(models.TestCaseData.path.like(f"{url}%")).order_by(
+            models.TestCaseData.number
+        )
+    )
+    return result.scalars().all()
 
 
-async def update_urls(db: Session, old_url: str, new_url: str):
+async def update_urls(db: AsyncSession, old_url: str, new_url: str):
     """
     按url查询数据
     :param db:
@@ -327,20 +377,23 @@ async def update_urls(db: Session, old_url: str, new_url: str):
     if not await get_urls(db=db, url=old_url):
         return None
 
-    db_info = db.query(models.TestCaseData).filter(models.TestCaseData.path.like(f"{old_url}%")).order_by(
-        models.TestCaseData.number
-    ).all()
+    result = await db.execute(
+        select(models.TestCaseData).filter(models.TestCaseData.path.like(f"{old_url}%")).order_by(
+            models.TestCaseData.number
+        )
+    )
+    db_info = result.scalars().all()
 
     url_info = []
     for info in db_info:
         info.path = new_url
-        db.commit()
-        db.refresh(info)
+        await db.commit()
+        await db.refresh(info)
         url_info.append(info)
     return url_info
 
 
-async def get_api_info(db: Session, case_id: int, number: int):
+async def get_api_info(db: AsyncSession, case_id: int, number: int):
     """
     查询用例api信息
     :param db:
@@ -348,13 +401,16 @@ async def get_api_info(db: Session, case_id: int, number: int):
     :param number:
     :return:
     """
-    return db.query(models.TestCaseData).filter(
-        models.TestCaseData.case_id == case_id,
-        models.TestCaseData.number == number
-    ).first()
+    result = await db.execute(
+        select(models.TestCaseData).filter(
+            models.TestCaseData.case_id == case_id,
+            models.TestCaseData.number == number,
+        )
+    )
+    return result.scalars().first()
 
 
-async def update_api_info(db: Session, api_info: schemas.TestCaseDataOut1):
+async def update_api_info(db: AsyncSession, api_info: schemas.TestCaseDataOut1):
     """
     修改用例api信息
     :param db:
@@ -364,15 +420,17 @@ async def update_api_info(db: Session, api_info: schemas.TestCaseDataOut1):
     if not await get_api_info(db=db, case_id=api_info.case_id, number=api_info.number):
         return False
 
-    db.query(models.TestCaseData).filter(
-        models.TestCaseData.case_id == api_info.case_id,
-        models.TestCaseData.number == api_info.number
-    ).update(api_info.dict())
-    db.commit()
+    await db.execute(
+        update(models.TestCaseData).where(
+            models.TestCaseData.case_id == api_info.case_id,
+            models.TestCaseData.number == api_info.number
+        ).values(api_info.dict())
+    )
+    await db.commit()
     return True
 
 
-async def update_api_number(db: Session, case_id: int, id_: int, new_number: int):
+async def update_api_number(db: AsyncSession, case_id: int, id_: int, new_number: int):
     """
     更新用例的number
     :param db:
@@ -381,19 +439,22 @@ async def update_api_number(db: Session, case_id: int, id_: int, new_number: int
     :param new_number:
     :return:
     """
-    db_temp = db.query(models.TestCaseData).filter(
-        models.TestCaseData.id == id_,
-        models.TestCaseData.case_id == case_id,
-    ).first()
+    result = await db.execute(
+        select(models.TestCaseData).filter(
+            models.TestCaseData.id == id_,
+            models.TestCaseData.case_id == case_id,
+        )
+    )
+    db_temp = result.scalars().first()
 
     if db_temp:
         db_temp.number = new_number
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
 
 
-async def put_case_name(db: Session, case_id: int, new_name: str):
+async def put_case_name(db: AsyncSession, case_id: int, new_name: str):
     """
     更新用例名称
     :param db:
@@ -404,16 +465,19 @@ async def put_case_name(db: Session, case_id: int, new_name: str):
     db_temp = None
 
     if case_id:
-        db_temp = db.query(models.TestCase).filter(models.TestCase.id == case_id).first()
+        result = await db.execute(
+            select(models.TestCase).filter(models.TestCase.id == case_id)
+        )
+        db_temp = result.scalars().first()
 
     if db_temp:
         db_temp.case_name = new_name
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
 
 
-async def get_case_numbers(db: Session, case_id: int, number: int):
+async def get_case_numbers(db: AsyncSession, case_id: int, number: int):
     """
     查询某个number后的用例数据
     :param db:
@@ -421,17 +485,20 @@ async def get_case_numbers(db: Session, case_id: int, number: int):
     :param number:
     :return:
     """
-    return db.query(models.TestCaseData).filter(
-        models.TestCaseData.case_id == case_id,
-        models.TestCaseData.number >= number
-    ).order_by(
-        models.TestCaseData.number
-    ).order_by(
-        models.TestCaseData.id.desc()
-    ).all()
+    result = await db.execute(
+        select(models.TestCaseData).filter(
+            models.TestCaseData.case_id == case_id,
+            models.TestCaseData.number >= number
+        ).order_by(
+            models.TestCaseData.number
+        ).order_by(
+            models.TestCaseData.id.desc()
+        )
+    )
+    return result.scalars().all()
 
 
-async def get_count(db: Session, case_name: str = None, today: bool = None):
+async def get_count(db: AsyncSession, case_name: str = None, today: bool = None):
     """
     记数查询
     :param db:
@@ -440,19 +507,28 @@ async def get_count(db: Session, case_name: str = None, today: bool = None):
     :return:
     """
     if case_name:
-        return db.query(func.count(models.TestCase.id)).filter(
-            models.TestCase.case_name.like(f"%{case_name}%")
-        ).scalar()
+        result = await db.execute(
+            select(func.count(models.TestCase.id)).filter(
+                models.TestCase.case_name.like(f"%{case_name}%")
+            )
+        )
+        return result.scalar()
 
     if today:
-        return db.query(func.count(models.TestCase.id)).filter(
-            models.TestCase.created_at >= datetime.datetime.now().date()
-        ).scalar()
+        result = await db.execute(
+            select(func.count(models.TestCase.id)).filter(
+                models.TestCase.created_at >= datetime.datetime.now().date()
+            )
+        )
+        return result.scalar()
 
-    return db.query(func.count(models.TestCase.id)).scalar()
+    result = await db.execute(
+        select(func.count(models.TestCase.id))
+    )
+    return result.scalar()
 
 
-async def get_api_count(db: Session, today: bool = None):
+async def get_api_count(db: AsyncSession, today: bool = None):
     """
     记数查询
     :param db:
@@ -460,26 +536,35 @@ async def get_api_count(db: Session, today: bool = None):
     :return:
     """
     if today:
-        return db.query(func.count(models.TestCaseData.id)).filter(
-            models.TestCaseData.created_at >= datetime.datetime.now().date()
-        ).scalar()
+        result = await db.execute(
+            select(func.count(models.TestCaseData.id)).filter(
+                models.TestCaseData.created_at >= datetime.datetime.now().date()
+            )
+        )
+        return result.scalar()
 
-    return db.query(func.count(models.TestCaseData.id)).scalar()
+    result = await db.execute(
+        select(func.count(models.TestCaseData.id))
+    )
+    return result.scalar()
 
 
-async def get_case_detail(db: Session, detail_id: int, ):
+async def get_case_detail(db: AsyncSession, detail_id: int, ):
     """
     查询模板数据
     :param db:
     :param detail_id:
     :return:
     """
-    return db.query(models.TestCaseData).filter(
-        models.TestCaseData.id == detail_id,
-    ).first()
+    result = await db.execute(
+        select(models.TestCaseData).filter(
+            models.TestCaseData.id == detail_id,
+        )
+    )
+    return result.scalars().first()
 
 
-async def update_case_path(db: Session, detail_id: int, new_path: str):
+async def update_case_path(db: AsyncSession, detail_id: int, new_path: str):
     """
     更新用例path
     :param db:
@@ -487,29 +572,38 @@ async def update_case_path(db: Session, detail_id: int, new_path: str):
     :param new_path:
     :return:
     """
-    db_temp = db.query(models.TestCaseData).filter(
-        models.TestCaseData.id == detail_id,
-    ).first()
+    result = await db.execute(
+        select(models.TestCaseData).filter(
+            models.TestCaseData.id == detail_id,
+        )
+    )
+    db_temp = result.scalars().first()
     if db_temp:
         db_temp.path = new_path
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
 
 
 async def get_case_info_to_number(
-        db: Session,
+        db: AsyncSession,
         case_id: int,
         numbers: (tuple, list),
 ):
-    return db.query(models.TestCaseData).filter(
-        models.TestCaseData.case_id == case_id,
-        models.TestCaseData.number.in_(numbers)
-    ).all()
+    result = await db.execute(
+        select(models.TestCaseData).filter(
+            models.TestCaseData.case_id == case_id,
+            models.TestCaseData.number.in_(numbers)
+        )
+    )
+    return result.scalars().all()
 
 
-async def get_case_data_group(db: Session, case_ids: List[int]):
-    return db.query(models.TestCase, models.TestCaseData).filter(
-        models.TestCaseData.case_id.in_(case_ids),
-        models.TestCase.id == models.TestCaseData.case_id
-    ).all()
+async def get_case_data_group(db: AsyncSession, case_ids: List[int]):
+    result = await db.execute(
+        select(models.TestCase, models.TestCaseData).filter(
+            models.TestCaseData.case_id.in_(case_ids),
+            models.TestCase.id == models.TestCaseData.case_id
+        )
+    )
+    return result.all()

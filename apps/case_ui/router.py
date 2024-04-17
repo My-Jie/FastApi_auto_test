@@ -12,7 +12,7 @@ import time
 import shutil
 from fastapi import APIRouter, Depends, UploadFile
 from depends import get_db
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import FileResponse
 from starlette.background import BackgroundTask
 
@@ -31,7 +31,7 @@ case_ui = APIRouter()
     '/add/playwright',
     name='新增UI用例'
 )
-async def put_playwright(pd: schemas.PlaywrightIn, db: Session = Depends(get_db)):
+async def put_playwright(pd: schemas.PlaywrightIn, db: AsyncSession = Depends(get_db)):
     """
     导入新的playwright脚本文件
     """
@@ -65,7 +65,7 @@ async def put_playwright(pd: schemas.PlaywrightIn, db: Session = Depends(get_db)
     response_model=schemas.PlaywrightOut,
     response_class=response_code.MyJSONResponse,
 )
-async def get_playwright_data(temp_id: int, db: Session = Depends(get_db)):
+async def get_playwright_data(temp_id: int, db: AsyncSession = Depends(get_db)):
     """
     获取playwright详情
     """
@@ -84,7 +84,7 @@ async def get_playwright_list(
         temp_name: str = None,
         page: int = 1,
         size: int = 10,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     获取playwright列表
@@ -119,7 +119,7 @@ async def get_playwright_list(
     '/get/playwright/case/{temp_id}',
     name='获取文本中对应的数据',
 )
-async def get_playwright_case(temp_id: int, db: Session = Depends(get_db)):
+async def get_playwright_case(temp_id: int, db: AsyncSession = Depends(get_db)):
     """
     获取测试数据
     """
@@ -138,7 +138,7 @@ async def get_playwright_case(temp_id: int, db: Session = Depends(get_db)):
     '/down/playwright/data/{temp_id}',
     name='下载文本中的数据'
 )
-async def down_playwright_data(temp_id: int, db: Session = Depends(get_db)):
+async def down_playwright_data(temp_id: int, db: AsyncSession = Depends(get_db)):
     """
     下载ui测试数据
     """
@@ -183,7 +183,7 @@ async def down_playwright_data(temp_id: int, db: Session = Depends(get_db)):
 async def upload_data_gather(
         temp_id: int,
         file: UploadFile,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     测试数据集上传
@@ -215,7 +215,7 @@ async def upload_data_gather(
     '/del/playwright/data/{temp_id}',
     name='删除UI数据列表,'
 )
-async def del_playwright_data(temp_id: int, db: Session = Depends(get_db)):
+async def del_playwright_data(temp_id: int, db: AsyncSession = Depends(get_db)):
     """
     删除UI数据列表
     """
@@ -229,7 +229,7 @@ async def del_playwright_data(temp_id: int, db: Session = Depends(get_db)):
     name='获取UI数据集详情',
     response_class=response_code.MyJSONResponse,
 )
-async def get_playwright_gather(temp_id: int, db: Session = Depends(get_db)):
+async def get_playwright_gather(temp_id: int, db: AsyncSession = Depends(get_db)):
     """
     获取UI数据集详情:
     """
@@ -268,7 +268,7 @@ async def get_remote_browsers():
     '/copy/case',
     name='复制测试用例数据，形成新的测试用例',
 )
-async def copy_case(temp_id: int, db: Session = Depends(get_db)):
+async def copy_case(temp_id: int, db: AsyncSession = Depends(get_db)):
     temp_info = await crud.get_playwright(db=db, temp_id=temp_id)
     if not temp_info:
         return await response_code.resp_400(message='没有获取到这个用例id')
@@ -291,6 +291,6 @@ async def copy_case(temp_id: int, db: Session = Depends(get_db)):
     '/del/gather',
     name='删除数据集'
 )
-async def del_gather(dg: schemas.DelGrater, db: Session = Depends(get_db)):
+async def del_gather(dg: schemas.DelGrater, db: AsyncSession = Depends(get_db)):
     await crud.del_play_case_data(db=db, temp_id=dg.temp_id, case_ids=dg.gather_ids)
     return await response_code.resp_200()

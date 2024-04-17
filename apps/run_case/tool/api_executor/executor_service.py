@@ -15,7 +15,7 @@ import base64
 import asyncio
 import aiohttp
 import jsonpath
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from aiohttp import FormData, client_exceptions
 from apps.case_service import crud as case_crud
 from apps.template import crud as temp_crud
@@ -26,6 +26,7 @@ from apps.case_service.tool import jsonpath_count
 from apps.run_case import CASE_STATUS, CASE_RESPONSE, CASE_STATUS_LIST
 from tools import logger, get_cookie, AsyncMySql
 from tools.read_setting import setting
+from tools.database import async_session_local
 
 from .base_abstract import ApiBase
 from ..handle_headers import replace_headers
@@ -36,7 +37,7 @@ from ..assert_case import AssertCase
 
 class ExecutorService(ApiBase):
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         super(ExecutorService, self).__init__()
         self._db = db
         self._case_group = {}
@@ -245,22 +246,24 @@ class ExecutorService(ApiBase):
                 report['time']['avg_time'] = report['time']['total_time'] / report['result']['run_api']
 
             async def save_report():
-                # 写入报告列表
-                db_data = await report_crud.create_api_list(db=self._db, data=report_schemas.ApiReportListInt(**report))
-                # 写入详情列表
-                await report_crud.create_api_detail(
-                    db=self._db,
-                    data=[x for x in api_list if x['report']['is_executor']],
-                    report_id=db_data.id
-                )
-                # 更新用例次数
-                await run_crud.update_test_case_order(
-                    db=self._db,
-                    case_id=report['case_id'],
-                    is_fail={0: False, 1: True}.get(report['result']['result'])
-                )
+                async with async_session_local() as db:
+                    # 写入报告列表
+                    db_data = await report_crud.create_api_list(db=db, data=report_schemas.ApiReportListInt(**report))
+                    # 写入详情列表
+                    await report_crud.create_api_detail(
+                        db=db,
+                        data=[x for x in api_list if x['report']['is_executor']],
+                        report_id=db_data.id
+                    )
+                    # 更新用例次数
+                    await run_crud.update_test_case_order(
+                        db=db,
+                        case_id=report['case_id'],
+                        is_fail={0: False, 1: True}.get(report['result']['result'])
+                    )
 
             asyncio.create_task(save_report())
+
             self.report_list.append(report)
             CASE_RESPONSE[report['case_id']] = copy.deepcopy(api_list)
 

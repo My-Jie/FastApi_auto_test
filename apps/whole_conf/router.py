@@ -9,7 +9,7 @@
 
 from typing import List
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from depends import get_db
 from apps.whole_conf import crud, schemas
@@ -28,7 +28,7 @@ conf = APIRouter()
     name='添加域名',
     response_model=schemas.ConfHostOut
 )
-async def add_host(conf_host: schemas.ConfHostIn, db: Session = Depends(get_db)):
+async def add_host(conf_host: schemas.ConfHostIn, db: AsyncSession = Depends(get_db)):
     if await crud.get_host(db=db, name=conf_host.name):
         return await response_code.resp_400(message='存在相同的name')
 
@@ -40,7 +40,7 @@ async def add_host(conf_host: schemas.ConfHostIn, db: Session = Depends(get_db))
     name='获取域名',
     response_model=List[schemas.ConfHostOut]
 )
-async def get_host(host_id: int = None, db: Session = Depends(get_db)):
+async def get_host(host_id: int = None, db: AsyncSession = Depends(get_db)):
     return await crud.get_host(db=db, id_=host_id)
 
 
@@ -48,7 +48,7 @@ async def get_host(host_id: int = None, db: Session = Depends(get_db)):
     '/update/host',
     name='修改域名',
 )
-async def update_host(host_id: int, conf_host: schemas.ConfHostIn, db: Session = Depends(get_db)):
+async def update_host(host_id: int, conf_host: schemas.ConfHostIn, db: AsyncSession = Depends(get_db)):
     if not await crud.get_host(db=db, id_=host_id):
         return await response_code.resp_400()
 
@@ -60,7 +60,7 @@ async def update_host(host_id: int, conf_host: schemas.ConfHostIn, db: Session =
     '/del/host',
     name='删除域名'
 )
-async def del_host(host_id: int, db: Session = Depends(get_db)):
+async def del_host(host_id: int, db: AsyncSession = Depends(get_db)):
     if not await crud.get_host(db=db, id_=host_id):
         return await response_code.resp_400()
 
@@ -78,7 +78,7 @@ async def del_host(host_id: int, db: Session = Depends(get_db)):
     name='添加项目',
     response_model=schemas.ConfProjectOut
 )
-async def add_project(conf_project: schemas.ConfProjectIn, db: Session = Depends(get_db)):
+async def add_project(conf_project: schemas.ConfProjectIn, db: AsyncSession = Depends(get_db)):
     if await crud.get_project(db=db, name=conf_project.name):
         return await response_code.resp_400(message='存在相同的name')
 
@@ -90,7 +90,7 @@ async def add_project(conf_project: schemas.ConfProjectIn, db: Session = Depends
     name='获取项目',
     response_model=List[schemas.ConfProjectOut]
 )
-async def get_project(project_id: int = None, db: Session = Depends(get_db)):
+async def get_project(project_id: int = None, db: AsyncSession = Depends(get_db)):
     return await crud.get_project(db=db, id_=project_id)
 
 
@@ -98,7 +98,7 @@ async def get_project(project_id: int = None, db: Session = Depends(get_db)):
     '/update/project',
     name='修改项目',
 )
-async def update_project(project_id: int, conf_project: schemas.ConfProjectIn, db: Session = Depends(get_db)):
+async def update_project(project_id: int, conf_project: schemas.ConfProjectIn, db: AsyncSession = Depends(get_db)):
     if not await crud.get_project(db=db, id_=project_id):
         return await response_code.resp_400()
 
@@ -110,7 +110,7 @@ async def update_project(project_id: int, conf_project: schemas.ConfProjectIn, d
     '/del/project',
     name='删除项目'
 )
-async def del_project(project_id: int, db: Session = Depends(get_db)):
+async def del_project(project_id: int, db: AsyncSession = Depends(get_db)):
     if not await crud.get_project(db=db, id_=project_id):
         return await response_code.resp_400()
 
@@ -128,7 +128,7 @@ async def del_project(project_id: int, db: Session = Depends(get_db)):
     name='添加数据库',
     response_model=schemas.ConfDBOut
 )
-async def add_db(conf_db: schemas.ConfDBIn, db: Session = Depends(get_db)):
+async def add_db(conf_db: schemas.ConfDBIn, db: AsyncSession = Depends(get_db)):
     if await crud.get_db(db=db, name=conf_db.name):
         return await response_code.resp_400(message='存在相同的name')
 
@@ -140,7 +140,7 @@ async def add_db(conf_db: schemas.ConfDBIn, db: Session = Depends(get_db)):
     name='获取数据库',
     response_model=List[schemas.ConfDBOut]
 )
-async def get_db_(db_id: int = None, db: Session = Depends(get_db)):
+async def get_db_(db_id: int = None, db: AsyncSession = Depends(get_db)):
     return await crud.get_db(db=db, id_=db_id)
 
 
@@ -148,7 +148,7 @@ async def get_db_(db_id: int = None, db: Session = Depends(get_db)):
     '/update/db',
     name='修改数据库',
 )
-async def update_db(db_id: int, conf_db: schemas.ConfDBIn, db: Session = Depends(get_db)):
+async def update_db(db_id: int, conf_db: schemas.ConfDBIn, db: AsyncSession = Depends(get_db)):
     if not await crud.get_db(db=db, id_=db_id):
         return await response_code.resp_400()
 
@@ -160,7 +160,7 @@ async def update_db(db_id: int, conf_db: schemas.ConfDBIn, db: Session = Depends
     '/del/db',
     name='删除数据库'
 )
-async def del_db(db_id: int, db: Session = Depends(get_db)):
+async def del_db(db_id: int, db: AsyncSession = Depends(get_db)):
     if not await crud.get_db(db=db, id_=db_id):
         return await response_code.resp_400()
 
@@ -178,7 +178,7 @@ async def del_db(db_id: int, db: Session = Depends(get_db)):
     name='添加统一响应',
     response_model=schemas.ConfUnifyResOut
 )
-async def add_unify(conf_unify_res: schemas.ConfUnifyResIn, db: Session = Depends(get_db)):
+async def add_unify(conf_unify_res: schemas.ConfUnifyResIn, db: AsyncSession = Depends(get_db)):
     if await crud.get_unify_res(db=db, name=conf_unify_res.name):
         return await response_code.resp_400(message='存在相同的name')
 
@@ -196,7 +196,7 @@ async def add_unify(conf_unify_res: schemas.ConfUnifyResIn, db: Session = Depend
     name='获取统一响应',
     response_model=List[schemas.ConfUnifyResOut]
 )
-async def get_unify(unify_res_id: int = None, db: Session = Depends(get_db)):
+async def get_unify(unify_res_id: int = None, db: AsyncSession = Depends(get_db)):
     return await crud.get_unify_res(db=db, id_=unify_res_id)
 
 
@@ -204,7 +204,7 @@ async def get_unify(unify_res_id: int = None, db: Session = Depends(get_db)):
     '/update/unify',
     name='修改统一响应',
 )
-async def update_unify(unify_res_id: int, conf_unify_res: schemas.ConfUnifyResIn, db: Session = Depends(get_db)):
+async def update_unify(unify_res_id: int, conf_unify_res: schemas.ConfUnifyResIn, db: AsyncSession = Depends(get_db)):
     if not await crud.get_unify_res(db=db, id_=unify_res_id):
         return await response_code.resp_400()
 
@@ -222,7 +222,7 @@ async def update_unify(unify_res_id: int, conf_unify_res: schemas.ConfUnifyResIn
     '/del/unify',
     name='删除统一响应'
 )
-async def del_unify(unify_res_id: int, db: Session = Depends(get_db)):
+async def del_unify(unify_res_id: int, db: AsyncSession = Depends(get_db)):
     if not await crud.get_unify_res(db=db, id_=unify_res_id):
         return await response_code.resp_400()
 
@@ -240,7 +240,7 @@ async def del_unify(unify_res_id: int, db: Session = Depends(get_db)):
     name='添加自定义参数',
     response_model=schemas.ConfCustomizeOut
 )
-async def add_customize(conf_customize: schemas.ConfCustomizeIn, db: Session = Depends(get_db)):
+async def add_customize(conf_customize: schemas.ConfCustomizeIn, db: AsyncSession = Depends(get_db)):
     if await crud.get_customize(db=db, name=conf_customize.name):
         return await response_code.resp_400(message='存在相同的name')
 
@@ -257,7 +257,7 @@ async def add_customize(conf_customize: schemas.ConfCustomizeIn, db: Session = D
     name='获取自定义参数',
     response_model=List[schemas.ConfCustomizeOut]
 )
-async def get_customize(customize_id: int = None, db: Session = Depends(get_db)):
+async def get_customize(customize_id: int = None, db: AsyncSession = Depends(get_db)):
     return await crud.get_customize(db=db, id_=customize_id)
 
 
@@ -265,7 +265,8 @@ async def get_customize(customize_id: int = None, db: Session = Depends(get_db))
     '/update/customize',
     name='修改自定义参数',
 )
-async def update_customize(customize_id: int, conf_customize: schemas.ConfCustomizeIn, db: Session = Depends(get_db)):
+async def update_customize(customize_id: int, conf_customize: schemas.ConfCustomizeIn,
+                           db: AsyncSession = Depends(get_db)):
     if not await crud.get_customize(db=db, id_=customize_id):
         return await response_code.resp_400()
 
@@ -283,7 +284,7 @@ async def update_customize(customize_id: int, conf_customize: schemas.ConfCustom
     '/del/customize',
     name='删除自定义参数'
 )
-async def del_customize(customize_id: int, db: Session = Depends(get_db)):
+async def del_customize(customize_id: int, db: AsyncSession = Depends(get_db)):
     if not await crud.get_customize(db=db, id_=customize_id):
         return await response_code.resp_400()
 

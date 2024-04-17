@@ -18,12 +18,11 @@ from aiohttp.client_exceptions import (
     ClientOSError
 )
 from typing import List
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from apps.case_service import crud as case_crud
 from apps.template import crud as temp_crud
 from apps.whole_conf import crud as conf_crud
 from apps.case_ui import crud as ui_crud
-from apps.run_case.tool import RunApi
 from tools.read_setting import setting
 from apps.run_case.tool.handle_host import whole_host
 from apps.run_case.tool.run_ui import run_ui
@@ -34,7 +33,7 @@ from .handle_playwright import replace_playwright
 from apps.run_case.tool.api_executor.executor_service import ExecutorService
 
 
-async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict = None):
+async def run_service_case(db: AsyncSession, case_ids: list, setting_info_dict: dict = None):
     """
     执行业务流程用例
     :param db:
@@ -52,7 +51,7 @@ async def run_service_case(db: Session, case_ids: list, setting_info_dict: dict 
     return executor.report_list
 
 
-async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_dict: dict = None):
+async def run_ddt_case(db: AsyncSession, case_id: int, case_info: list, setting_info_dict: dict = None):
     """
     执行数据驱动用例
     :param db:
@@ -101,22 +100,23 @@ async def run_ddt_case(db: Session, case_id: int, case_info: list, setting_info_
             raise Exception(f': {str(e)}')
 
         report_list.append(
-            {
-                'case_name': case,
-                'case_id': case_id,
-                'is_fail': api_report['is_fail'],
-                'total_time': api_report['total_time'],
-                'run_order': api_report['run_order'],
-                'success': api_report['success_case'],
-                'fail': api_report['fail_case'],
-            }
+            {}
+            # {
+            #     'case_name': case,
+            #     'case_id': case_id,
+            #     'is_fail': api_report['is_fail'],
+            #     'total_time': api_report['total_time'],
+            #     'run_order': api_report['run_order'],
+            #     'success': api_report['success_case'],
+            #     'fail': api_report['fail_case'],
+            # }
         )
 
     return report_list
 
 
 async def run_ui_case(
-        db: Session,
+        db: AsyncSession,
         rut: schemas.RunUiTemp,
         ui_temp_info: list,
         allure_dir: str,

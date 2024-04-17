@@ -12,7 +12,7 @@ import jsonpath
 from aiohttp import FormData
 from typing import List
 from tools.faker_data import FakerData
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.whole_conf import crud as conf_crud
 
@@ -20,7 +20,7 @@ COUNT = ['+', '-', '*', '/', '//', '%']
 
 
 async def replace_params_data(
-        db: Session,
+        db: AsyncSession,
         data: [dict, list],
         api_list: list,
         faker: FakerData,
@@ -101,7 +101,7 @@ async def replace_params_data(
 
 
 async def replace_url(
-        db: Session,
+        db: AsyncSession,
         old_str: str,
         api_list: list,
         faker: FakerData,
@@ -125,7 +125,7 @@ async def replace_url(
 
 
 async def header_srt(
-        db: Session,
+        db: AsyncSession,
         x: str,
         api_list: list,
         faker: FakerData,

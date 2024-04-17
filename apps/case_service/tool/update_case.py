@@ -9,13 +9,13 @@
 
 import re
 from typing import List
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from apps.case_service import crud, schemas
 from apps.template import schemas as temp_schemas
 from .auto_check import my_auto_check
 
 
-async def refresh(db: Session, case_id: int, start_number: int, type_: str):
+async def refresh(db: AsyncSession, case_id: int, start_number: int, type_: str):
     """
     刷新用例的number序号和jsonPath中的number
     :param db:
@@ -75,9 +75,10 @@ async def refresh(db: Session, case_id: int, start_number: int, type_: str):
             }))
 
 
-async def temp_to_case(db: Session, case_id: int, api_info: temp_schemas.TemplateDataInTwo):
+async def temp_to_case(db: AsyncSession, case_id: int, api_info: temp_schemas.TemplateDataInTwo):
     """
     将模板数据转为用例数据
+    :param db:
     :param case_id:
     :param api_info:
     :return:

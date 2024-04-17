@@ -19,7 +19,7 @@ class PlaywrightTemp(Base):
     __tablename__ = 'playwright_temp'
 
     # project_name = Column(Integer, nullable=True, index=True, comment='系统名称')
-    sys_name: Mapped[int] = mapped_column(Integer, nullable=True, index=True, comment='系统名称')
+    project_name: Mapped[int] = mapped_column(Integer, nullable=True, index=True, comment='系统名称')
     temp_name: Mapped[str] = mapped_column(String, nullable=True, index=True, comment='模板名称')
     rows: Mapped[int] = mapped_column(Integer, default=0, nullable=True, comment='行数')
     run_order: Mapped[int] = mapped_column(Integer, default=0, nullable=True, comment='执行次数')

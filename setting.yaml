@@ -32,7 +32,7 @@ selenoid:
       browser_version: 'chrome_104'
 
 # sqlite的文件地址
-sqlite: 'sqlite+aiosqlite:///./sqlite/test.sqlite3'
+sqlite: 'sqlite+aiosqlite:///./sqlite/auto_test.sqlite3'
 
 
 # 自动匹配参数的模式（发生在转化为用例时）

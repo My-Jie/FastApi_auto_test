@@ -9,7 +9,7 @@
 
 from apps.case_service import schemas
 from apps.template import crud
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
 
@@ -19,7 +19,7 @@ class CheckJson:
     """
 
     @classmethod
-    async def check_to_service(cls, db: Session, temp_id: int, case_data: List[schemas.TestCaseData]):
+    async def check_to_service(cls, db: AsyncSession, temp_id: int, case_data: List[schemas.TestCaseData]):
         """
         校验数据
         :param db:

@@ -15,7 +15,7 @@ from sqlalchemy import exc
 from typing import List, Any
 from pydantic import HttpUrl
 from fastapi import APIRouter, UploadFile, Depends, Form, File, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from starlette.responses import FileResponse
 from starlette.background import BackgroundTask
@@ -49,7 +49,7 @@ async def upload_file_har(
         project_name: int,
         har_type: schemas.HarType,
         file: UploadFile,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     1、上传文件后，解析数据，形成模板数据\n
@@ -111,7 +111,7 @@ async def upload_swagger_json(
         project_name: int,
         host: HttpUrl,
         file: UploadFile,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     上传Swagger的json文件，解析后存入模板，文件名称作为模板名称
@@ -181,7 +181,7 @@ async def insert_har(
         temp_id: int = Query(description='模板id'),
         numbers: str = Form(description='索引-整数列表,使用英文逗号隔开', min_length=1),
         file: UploadFile = File(description='上传Har文件'),
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     按num序号，按顺序插入原始数据到模板中
@@ -243,7 +243,7 @@ async def insert_har(
     '/swap/one',
     name='编排模板数据的顺序-单次'
 )
-async def swap_data_one(sdo: schemas.SwapDataOne, db: Session = Depends(get_db)):
+async def swap_data_one(sdo: schemas.SwapDataOne, db: AsyncSession = Depends(get_db)):
     """
     单次替换模板中API的顺序-索引号
     """
@@ -275,7 +275,7 @@ async def swap_data_one(sdo: schemas.SwapDataOne, db: Session = Depends(get_db))
     '/swap/many',
     name='编排模板数据的顺序-全部'
 )
-async def swap_data_many(sdm: schemas.SwapDataMany, db: Session = Depends(get_db)):
+async def swap_data_many(sdm: schemas.SwapDataMany, db: AsyncSession = Depends(get_db)):
     """
     依次替换模板中API的顺序-索引号
     """
@@ -328,7 +328,7 @@ async def swap_data_many(sdm: schemas.SwapDataMany, db: Session = Depends(get_db
 async def del_har(
         temp_id: int = Query(description='模板id'),
         numbers: str = Form(description='索引-整数列表,使用英文逗号隔开', min_length=1),
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     template_data = await crud.get_template_data(db=db, temp_id=temp_id)
     if not template_data:
@@ -361,7 +361,7 @@ async def del_har(
     '/del/all/{temp_id}',
     name='删除全部模板数据'
 )
-async def delete_name(temp_id: int, db: Session = Depends(get_db)):
+async def delete_name(temp_id: int, db: AsyncSession = Depends(get_db)):
     """
     删除模板数据
     """
@@ -395,7 +395,7 @@ async def get_templates(
         outline: bool = True,
         page: int = 1,
         size: int = 10,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     1、查询已存在的测试模板/场景\n
@@ -441,7 +441,7 @@ async def get_templates(
     response_class=response_code.MyJSONResponse,
     name='修改模板名称'
 )
-async def update_name(un: schemas.UpdateName, db: Session = Depends(get_db)):
+async def update_name(un: schemas.UpdateName, db: AsyncSession = Depends(get_db)):
     """
     修改模板名称
     """
@@ -460,7 +460,7 @@ async def update_name(un: schemas.UpdateName, db: Session = Depends(get_db)):
     response_model=schemas.TemplateDataOut,
     name='修改接口描述'
 )
-async def update_description(ud: schemas.UpdateDescription, db: Session = Depends(get_db)):
+async def update_description(ud: schemas.UpdateDescription, db: AsyncSession = Depends(get_db)):
     """
     修改接口描述
     """
@@ -479,7 +479,7 @@ async def update_description(ud: schemas.UpdateDescription, db: Session = Depend
     response_model_exclude=['file_data'],
     name='查询模板接口原始数据'
 )
-async def get_template_data(temp_name: str = None, temp_id: int = None, db: Session = Depends(get_db)):
+async def get_template_data(temp_name: str = None, temp_id: int = None, db: AsyncSession = Depends(get_db)):
     """
     按模板名称查询接口原始数据，不返回['headers', 'file_data']
     """
@@ -519,7 +519,7 @@ async def get_template_data(temp_name: str = None, temp_id: int = None, db: Sess
     '/data/host/list',
     name='查询模板host数据'
 )
-async def get_temp_host_list(temp_id: int, db: Session = Depends(get_db)):
+async def get_temp_host_list(temp_id: int, db: AsyncSession = Depends(get_db)):
     """
     查询模板的host列表
     """
@@ -535,7 +535,7 @@ async def create_new_temp(
         temp_name: str,
         project_name: int,
         number_list: List[str],
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     创建新的模板数据
@@ -593,7 +593,7 @@ async def create_new_temp(
     '/temp/all',
     name='模板全部数据'
 )
-async def temp_all_data(db: Session = Depends(get_db)):
+async def temp_all_data(db: AsyncSession = Depends(get_db)):
     """
     查询模板全部数据
     """
@@ -615,7 +615,7 @@ async def temp_all_data(db: Session = Depends(get_db)):
     '/add/api',
     name='添加模板api',
 )
-async def add_api(api_info: schemas.TemplateDataInTwo, db: Session = Depends(get_db)):
+async def add_api(api_info: schemas.TemplateDataInTwo, db: AsyncSession = Depends(get_db)):
     """
     新增模板接口，若关联得有用例，则同步新增用例接口
     """
@@ -661,7 +661,7 @@ async def add_api(api_info: schemas.TemplateDataInTwo, db: Session = Depends(get
     '/edit/api',
     name='修改模板api',
 )
-async def edit_api(api_info: schemas.TemplateDataInTwo, db: Session = Depends(get_db)):
+async def edit_api(api_info: schemas.TemplateDataInTwo, db: AsyncSession = Depends(get_db)):
     """
     修改模板接口，若关联得有用例，则同步修改用例接口
     """
@@ -676,7 +676,7 @@ async def edit_api(api_info: schemas.TemplateDataInTwo, db: Session = Depends(ge
     name='模板api详情',
     response_model=schemas.TemplateDataOut
 )
-async def detail_api(detail_id: int, db: Session = Depends(get_db)):
+async def detail_api(detail_id: int, db: AsyncSession = Depends(get_db)):
     """
     查询模板api详情
     """
@@ -690,7 +690,7 @@ async def detail_api(detail_id: int, db: Session = Depends(get_db)):
     '/del/api',
     name='删除模板api'
 )
-async def del_api(temp_id: int, number: int, db: Session = Depends(get_db)):
+async def del_api(temp_id: int, number: int, db: AsyncSession = Depends(get_db)):
     """
     删除模板接口，若关联得有用例，则同步删除用例接口
     """
@@ -731,7 +731,7 @@ async def del_api(temp_id: int, number: int, db: Session = Depends(get_db)):
     '/send/api',
     name='发送测试数据调试',
 )
-async def send_api_info(api_info: schemas.TemplateDataInTwo, get_cookie: bool, db: Session = Depends(get_db)):
+async def send_api_info(api_info: schemas.TemplateDataInTwo, get_cookie: bool, db: AsyncSession = Depends(get_db)):
     return await send_api(db=db, api_info=api_info, get_cookie=get_cookie)
 
 
@@ -772,7 +772,7 @@ async def del_debug_info(temp_id: int):
     # deprecated=True,
     # include_in_schema=False
 )
-async def download_temp_excel(temp_id: int, db: Session = Depends(get_db)):
+async def download_temp_excel(temp_id: int, db: AsyncSession = Depends(get_db)):
     """
     将Charles录制的测试场景原始数据下载到excel
     """
@@ -803,7 +803,7 @@ async def download_temp_excel(temp_id: int, db: Session = Depends(get_db)):
     '/save/api/data',
     name='保存模板数据'
 )
-async def sync_api_data(sad: schemas.SaveApiData, db: Session = Depends(get_db)):
+async def sync_api_data(sad: schemas.SaveApiData, db: AsyncSession = Depends(get_db)):
     if not await crud.get_temp_name(db=db, temp_id=sad.temp_id):
         return await response_code.resp_400(message='没有获取到这个模板数据')
 
@@ -822,7 +822,7 @@ async def sync_api_data(sad: schemas.SaveApiData, db: Session = Depends(get_db))
     '/save/api/path',
     name='保存模板的method/path/code'
 )
-async def save_api_path(sad: schemas.SaveApiPath, db: Session = Depends(get_db)):
+async def save_api_path(sad: schemas.SaveApiPath, db: AsyncSession = Depends(get_db)):
     if not await crud.get_temp_name(db=db, temp_id=sad.temp_id):
         return await response_code.resp_400(message='没有获取到这个模板数据')
 
@@ -844,12 +844,13 @@ async def get_sync_api_data(
         sync_type: str,
         temp_all: bool = False,
         case_all: bool = False,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     detail_data = await crud.get_tempdata_detail(db=db, detail_id=detail_id, temp_name=True)
     if not detail_data:
         return await response_code.resp_400(message='没有获取到这个详情数据')
 
+    print(detail_data)
     now_temp = {
         'params': detail_data[0].params,
         'data': detail_data[0].data,
@@ -903,7 +904,7 @@ async def get_sync_api_data(
 )
 async def put_sync_api_data(
         ssd: schemas.SetSyncData,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     detail_data = await crud.get_tempdata_detail(db=db, detail_id=ssd.detail_id)
     if not detail_data:

@@ -10,17 +10,15 @@
 import os
 import json
 import time
-import re
 from typing import List, Any
 from fastapi import APIRouter, UploadFile, Depends, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import FileResponse
 from starlette.background import BackgroundTask
 from depends import get_db
 from apps import response_code
 from tools.check_case_json import CheckJson
 from tools import OperationJson, ExtractParamsPath, RepData, filter_number
-from tools.read_setting import setting
 from .tool import GetCaseDataInfo, check, jsonpath_count, aim
 
 from apps.whole_conf import crud as conf_crud
@@ -46,7 +44,7 @@ async def test_case_data(
         temp_name: str,
         mode: schemas.ModeEnum,
         fail_stop: bool,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     自动处理部分接口数据上下级关联数据
@@ -77,7 +75,7 @@ async def download_case_data(
         temp_id: int,
         mode: schemas.ModeEnum,
         fail_stop: bool,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     自动处理部分接口上下级关联数据\n
@@ -119,7 +117,7 @@ async def test_case_upload_json(
         case_id: int = None,
         case_name: str = None,
         cover: bool = False,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     上传json文件，解析后储存测试数据
@@ -169,7 +167,7 @@ async def temp_to_case(
         case_name: str = None,
         cover: bool = False,
         fail_stop: bool = True,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     db_temp = await temp_crud.get_temp_name(db=db, temp_id=temp_id)
     if not db_temp:
@@ -210,7 +208,7 @@ async def temp_to_case(
     response_model_exclude_unset=True,
     name='查看用例测试数据'
 )
-async def case_data_info(case_id: int, db: Session = Depends(get_db)):
+async def case_data_info(case_id: int, db: AsyncSession = Depends(get_db)):
     """
     查看测试数据
     """
@@ -234,7 +232,7 @@ async def case_data_info(case_id: int, db: Session = Depends(get_db)):
     response_model_exclude_unset=True,
     name='下载测试数据-Json'
 )
-async def download_case_data_info(case_id: int, db: Session = Depends(get_db)):
+async def download_case_data_info(case_id: int, db: AsyncSession = Depends(get_db)):
     """
     下载测试数据
     """
@@ -271,7 +269,7 @@ async def case_data_list(
         page: int = 1,
         size: int = 10,
         outline: bool = True,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     查看测试用例列表
@@ -316,7 +314,7 @@ async def case_data_list(
     '/del/{case_id}',
     name='删除测试数据'
 )
-async def del_case(case_id: int, db: Session = Depends(get_db)):
+async def del_case(case_id: int, db: AsyncSession = Depends(get_db)):
     if not await crud.get_case_info(db=db, case_id=case_id):
         return await response_code.resp_400()
     await crud.del_case_data(db=db, case_id=case_id)
@@ -332,7 +330,7 @@ async def del_case(case_id: int, db: Session = Depends(get_db)):
     response_model_exclude_unset=True,
     name='查询url数据'
 )
-async def query_urls(url: str = Query(..., min_length=5), db: Session = Depends(get_db)):
+async def query_urls(url: str = Query(..., min_length=5), db: AsyncSession = Depends(get_db)):
     return await crud.get_urls(db=db, url=url)
 
 
@@ -346,7 +344,7 @@ async def query_urls(url: str = Query(..., min_length=5), db: Session = Depends(
 async def update_urls(
         old_url: str = Query(..., min_length=5),
         new_url: str = Query(..., min_length=5),
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     return await crud.update_urls(db=db, old_url=old_url, new_url=new_url)
 
@@ -355,7 +353,7 @@ async def update_urls(
     '/name/edit',
     name='修改用例名称'
 )
-async def name_edit(un: schemas.UpdateName, db: Session = Depends(get_db)):
+async def name_edit(un: schemas.UpdateName, db: AsyncSession = Depends(get_db)):
     """
     修改用例名称
     """
@@ -373,7 +371,7 @@ async def name_edit(un: schemas.UpdateName, db: Session = Depends(get_db)):
     response_model_exclude_unset=True,
     name='按用例/序号查看API数据'
 )
-async def get_api_info(case_id: int, number: int, db: Session = Depends(get_db)):
+async def get_api_info(case_id: int, number: int, db: AsyncSession = Depends(get_db)):
     return await crud.get_api_info(db=db, case_id=case_id, number=number)
 
 
@@ -381,7 +379,7 @@ async def get_api_info(case_id: int, number: int, db: Session = Depends(get_db))
     '/update/api/info',
     name='按用例/序号修改API数据'
 )
-async def put_api_info(api_info: schemas.TestCaseDataOut1, db: Session = Depends(get_db)):
+async def put_api_info(api_info: schemas.TestCaseDataOut1, db: AsyncSession = Depends(get_db)):
     if await crud.update_api_info(db=db, api_info=api_info):
         return await response_code.resp_200()
     else:
@@ -392,7 +390,7 @@ async def put_api_info(api_info: schemas.TestCaseDataOut1, db: Session = Depends
     '/swap/one',
     name='编排用例数据的顺序-单次'
 )
-async def swap_one(one: schemas.SwapOne, db: Session = Depends(get_db)):
+async def swap_one(one: schemas.SwapOne, db: AsyncSession = Depends(get_db)):
     """
     单次替换用例中API的顺序-索引号
     """
@@ -424,7 +422,7 @@ async def swap_one(one: schemas.SwapOne, db: Session = Depends(get_db)):
     '/swap/many',
     name='编排用例数据的顺序-全部'
 )
-async def swap_many(many: schemas.SwapMany, db: Session = Depends(get_db)):
+async def swap_many(many: schemas.SwapMany, db: AsyncSession = Depends(get_db)):
     """
     依次替换用例中API的顺序-索引号
     """
@@ -466,7 +464,7 @@ async def swap_many(many: schemas.SwapMany, db: Session = Depends(get_db)):
     '/set/api/config',
     name='设置用例配置'
 )
-async def set_api_config(sac: schemas.SetApiConfig, db: Session = Depends(get_db)):
+async def set_api_config(sac: schemas.SetApiConfig, db: AsyncSession = Depends(get_db)):
     """
     设置每个接口的配置信息
     """
@@ -488,7 +486,7 @@ async def set_api_config(sac: schemas.SetApiConfig, db: Session = Depends(get_db
     '/set/api/description',
     name='设置描述信息'
 )
-async def set_api_description(sad: schemas.SetApiDescription, db: Session = Depends(get_db)):
+async def set_api_description(sad: schemas.SetApiDescription, db: AsyncSession = Depends(get_db)):
     """
     设置每个接口的描述信息
     """
@@ -508,7 +506,7 @@ async def set_api_description(sad: schemas.SetApiDescription, db: Session = Depe
     '/set/api/check',
     name='设置校验内容'
 )
-async def set_api_check(sac: schemas.SetApiCheck, db: Session = Depends(get_db)):
+async def set_api_check(sac: schemas.SetApiCheck, db: AsyncSession = Depends(get_db)):
     """
     设置每个接口的校验信息
     """
@@ -551,7 +549,7 @@ async def set_api_check(sac: schemas.SetApiCheck, db: Session = Depends(get_db))
     '/set/api/params/data',
     name='更新用例params/data数据'
 )
-async def set_params_data(spd: schemas.SedParamsData, db: Session = Depends(get_db)):
+async def set_params_data(spd: schemas.SedParamsData, db: AsyncSession = Depends(get_db)):
     """
     更新用例的params数据或data数据
     """
@@ -573,7 +571,7 @@ async def set_params_data(spd: schemas.SedParamsData, db: Session = Depends(get_
     '/set/api/header',
     name='设置请求头内容'
 )
-async def set_api_check(sac: schemas.setApiHeader, db: Session = Depends(get_db)):
+async def set_api_check(sac: schemas.setApiHeader, db: AsyncSession = Depends(get_db)):
     """
     设置每个接口的校验信息
     """
@@ -604,7 +602,7 @@ async def get_response_json_path(
         data_type: schemas.RepType,
         key_value: schemas.KeyValueType,
         ext_type: schemas.ExtType,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     通过用例id从原始数据中获取jsonpath表达式
@@ -636,7 +634,7 @@ async def get_case_data_json_path(
         new_str: str,
         key_value: schemas.KeyValueType,
         ext_type: schemas.ExtType,
-        db: Session = Depends(get_db)):
+        db: AsyncSession = Depends(get_db)):
     """
     通过用例id从测试数据url、params、data中预览会被替换的数据
     """
@@ -716,7 +714,7 @@ async def replace_one_casedata(
         new_data: str,
         rep: bool,
         data_type: str,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     单个用例替换单条api数据
@@ -760,7 +758,7 @@ async def replace_one_casedata(
     '/copy/case',
     name='复制测试用例数据，形成新的测试用例'
 )
-async def copy_case(case_id: int, db: Session = Depends(get_db)):
+async def copy_case(case_id: int, db: AsyncSession = Depends(get_db)):
     """
     复制测试用例，形成新的测试用例
     """
@@ -793,7 +791,7 @@ async def copy_case(case_id: int, db: Session = Depends(get_db)):
     '/get/apiInfo',
     name='按用例id和number获取历史模板的path, params, data, herders, response'
 )
-async def get_response(case_id: int, number: int, type_: str, db: Session = Depends(get_db)):
+async def get_response(case_id: int, number: int, type_: str, db: AsyncSession = Depends(get_db)):
     case_info = await crud.get_case_info(db=db, case_id=case_id)
     if not case_info:
         return case_info
@@ -815,7 +813,7 @@ async def get_response(case_id: int, number: int, type_: str, db: Session = Depe
     '/get/jsonpath',
     name='获取用例中jsonpath的引用关系'
 )
-async def get_jsonpath(case_id: int, jsonpath_name: str = None, db: Session = Depends(get_db)):
+async def get_jsonpath(case_id: int, jsonpath_name: str = None, db: AsyncSession = Depends(get_db)):
     case_info = await crud.get_case_info(db=db, case_id=case_id)
     if not case_info:
         return case_info
@@ -853,11 +851,12 @@ async def get_jsonpath(case_id: int, jsonpath_name: str = None, db: Session = De
     response_model=schemas.TestCaseDataOut2,
     response_model_exclude_unset=True,
 )
-async def detail_api(detail_id: int, db: Session = Depends(get_db)):
+async def detail_api(detail_id: int, db: AsyncSession = Depends(get_db)):
     """
     查询用例api详情
     """
     case_detail = await crud.get_case_detail(db=db, detail_id=detail_id)
+    print(case_detail)
     if not case_detail:
         return await response_code.resp_400(message='没有获取到这个用例api详情数据')
     return case_detail
@@ -870,7 +869,7 @@ async def detail_api(detail_id: int, db: Session = Depends(get_db)):
 async def update_api_path(
         detail_id: int,
         new_path: str,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     修改api路径

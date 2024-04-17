@@ -7,7 +7,8 @@
 @Time: 2023/4/16-14:42
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select, delete, update
+from sqlalchemy.ext.asyncio import AsyncSession
 from apps.whole_conf import models, schemas
 
 """
@@ -15,39 +16,56 @@ from apps.whole_conf import models, schemas
 """
 
 
-async def create_host(db: Session, conf_host: schemas.ConfHostIn):
+async def create_host(db: AsyncSession, conf_host: schemas.ConfHostIn):
     db_info = models.ConfHost(**conf_host.dict())
     db.add(db_info)
-    db.commit()
-    db.refresh(db_info)
+    await db.commit()
+    await db.refresh(db_info)
     return db_info
 
 
-async def get_host(db: Session, id_: int = None, name: str = None, ids: list = None):
+async def get_host(db: AsyncSession, id_: int = None, name: str = None, ids: list = None):
     if id_:
-        return db.query(models.ConfHost).filter(models.ConfHost.id == id_).all()
+        result = await db.execute(
+            select(models.ConfHost).filter(models.ConfHost.id == id_)
+        )
+        return result.scalars().all()
 
     if name:
-        return db.query(models.ConfHost).filter(models.ConfHost.name == name).all()
+        result = await db.execute(
+            select(models.ConfHost).filter(models.ConfHost.name == name)
+        )
+        return result.scalars().all()
 
     if ids:
-        return db.query(models.ConfHost).filter(models.ConfHost.id.in_(ids)).all()
+        result = await db.execute(
+            select(models.ConfHost).filter(models.ConfHost.id.in_(ids))
+        )
+        return result.scalars().all()
 
-    return db.query(models.ConfHost).all()
-
-
-async def update_host(db: Session, id_: int, conf_host: schemas.ConfHostIn):
-    db.query(models.ConfHost).filter(
-        models.ConfHost.id == id_
-    ).update(conf_host.dict())
-    db.commit()
+    result = await db.execute(select(models.ConfHost))
+    return result.scalars().all()
 
 
-async def del_host(db: Session, id_: int):
-    db.query(models.ConfHost).filter(
-        models.ConfHost.id == id_,
-    ).delete()
-    db.commit()
+async def update_host(db: AsyncSession, id_: int, conf_host: schemas.ConfHostIn):
+    """
+
+    :param db:
+    :param id_:
+    :param conf_host:
+    :return:
+    """
+    await db.execute(
+        update(models.ConfHost).where(models.ConfHost.id == id_).values(conf_host.dict())
+    )
+    await db.commit()
+
+
+async def del_host(db: AsyncSession, id_: int):
+    await db.execute(
+        delete(models.ConfHost).where(models.ConfHost.id == id_)
+    )
+    await db.commit()
 
 
 """
@@ -55,42 +73,52 @@ async def del_host(db: Session, id_: int):
 """
 
 
-async def create_project(db: Session, conf_project: schemas.ConfProjectIn):
+async def create_project(db: AsyncSession, conf_project: schemas.ConfProjectIn):
     db_info = models.ConfProject(**conf_project.dict())
     db.add(db_info)
-    db.commit()
-    db.refresh(db_info)
+    await db.commit()
+    await db.refresh(db_info)
     return db_info
 
 
-async def get_project(db: Session, id_: int = None, name: str = None):
+async def get_project(db: AsyncSession, id_: int = None, name: str = None):
     if id_:
-        return db.query(models.ConfProject).filter(models.ConfProject.id == id_).all()
+        result = await db.execute(
+            select(models.ConfProject).filter(models.ConfProject.id == id_)
+        )
+        return result.scalars().all()
 
     if name:
-        return db.query(models.ConfProject).filter(models.ConfProject.name == name).all()
+        result = await db.execute(
+            select(models.ConfProject).filter(models.ConfProject.name == name)
+        )
+        return result.scalars().all()
 
-    return db.query(models.ConfProject).all()
+    result = await db.execute(select(models.ConfProject))
+    return result.scalars().all()
 
 
-async def get_project_code(db: Session, id_: int = None):
-    db_info = db.query(models.ConfProject.code).filter(models.ConfProject.id == id_).first()
+async def get_project_code(db: AsyncSession, id_: int = None):
+    result = await db.execute(
+        select(models.ConfProject.code).filter(models.ConfProject.id == id_)
+    )
+    db_info = result.scalars().all()
     if db_info:
         return db_info[0]
 
 
-async def update_project(db: Session, id_: int, conf_project: schemas.ConfProjectIn):
-    db.query(models.ConfProject).filter(
-        models.ConfProject.id == id_
-    ).update(conf_project.dict())
-    db.commit()
+async def update_project(db: AsyncSession, id_: int, conf_project: schemas.ConfProjectIn):
+    await db.execute(
+        update(models.ConfProject).where(models.ConfProject.id == id_).values(conf_project.dict())
+    )
+    await db.commit()
 
 
-async def del_project(db: Session, id_: int):
-    db.query(models.ConfProject).filter(
-        models.ConfProject.id == id_,
-    ).delete()
-    db.commit()
+async def del_project(db: AsyncSession, id_: int):
+    await db.execute(
+        delete(models.ConfProject).where(models.ConfProject.id == id_)
+    )
+    await db.commit()
 
 
 """
@@ -98,39 +126,49 @@ async def del_project(db: Session, id_: int):
 """
 
 
-async def create_db(db: Session, conf_db: schemas.ConfDBIn):
+async def create_db(db: AsyncSession, conf_db: schemas.ConfDBIn):
     db_info = models.ConfDB(**conf_db.dict())
     db.add(db_info)
-    db.commit()
-    db.refresh(db_info)
+    await db.commit()
+    await db.refresh(db_info)
     return db_info
 
 
-async def get_db(db: Session, id_: int = None, name: str = None, ids: list = None):
+async def get_db(db: AsyncSession, id_: int = None, name: str = None, ids: list = None):
     if id_:
-        return db.query(models.ConfDB).filter(models.ConfDB.id == id_).all()
+        result = await db.execute(
+            select(models.ConfDB).filter(models.ConfDB.id == id_)
+        )
+        return result.scalars().all()
 
     if name:
-        return db.query(models.ConfDB).filter(models.ConfDB.name == name).all()
+        result = await db.execute(
+            select(models.ConfDB).filter(models.ConfDB.name == name)
+        )
+        return result.scalars().all()
 
     if ids:
-        return db.query(models.ConfDB).filter(models.ConfDB.id.in_(ids)).all()
+        result = await db.execute(
+            select(models.ConfDB).filter(models.ConfDB.id.in_(ids))
+        )
+        return result.scalars().all()
 
-    return db.query(models.ConfDB).all()
-
-
-async def update_db(db: Session, id_: int, conf_db: schemas.ConfDBIn):
-    db.query(models.ConfDB).filter(
-        models.ConfDB.id == id_
-    ).update(conf_db.dict())
-    db.commit()
+    result = await db.execute(select(models.ConfDB))
+    return result.scalars().all()
 
 
-async def del_db(db: Session, id_: int):
-    db.query(models.ConfDB).filter(
-        models.ConfDB.id == id_,
-    ).delete()
-    db.commit()
+async def update_db(db: AsyncSession, id_: int, conf_db: schemas.ConfDBIn):
+    await db.execute(
+        update(models.ConfDB).where(models.ConfDB.id == id_).values(conf_db.dict())
+    )
+    await db.commit()
+
+
+async def del_db(db: AsyncSession, id_: int):
+    await db.execute(
+        delete(models.ConfDB).where(models.ConfDB.id == id_)
+    )
+    await db.commit()
 
 
 """
@@ -138,36 +176,43 @@ async def del_db(db: Session, id_: int):
 """
 
 
-async def create_unify_res(db: Session, conf_unify_res: schemas.ConfUnifyResIn):
+async def create_unify_res(db: AsyncSession, conf_unify_res: schemas.ConfUnifyResIn):
     db_info = models.ConfUnifyRes(**conf_unify_res.dict())
     db.add(db_info)
-    db.commit()
-    db.refresh(db_info)
+    await db.commit()
+    await db.refresh(db_info)
     return db_info
 
 
-async def get_unify_res(db: Session, id_: int = None, name: str = None):
+async def get_unify_res(db: AsyncSession, id_: int = None, name: str = None):
     if id_:
-        return db.query(models.ConfUnifyRes).filter(models.ConfUnifyRes.id == id_).all()
+        result = await db.execute(
+            select(models.ConfUnifyRes).filter(models.ConfUnifyRes.id == id_)
+        )
+        return result.scalars().all()
 
     if name:
-        return db.query(models.ConfUnifyRes).filter(models.ConfUnifyRes.name == name).all()
+        result = await db.execute(
+            select(models.ConfUnifyRes).filter(models.ConfUnifyRes.name == name)
+        )
+        return result.scalars().all()
 
-    return db.query(models.ConfUnifyRes).all()
-
-
-async def update_unify_res(db: Session, id_: int, conf_unify_res: schemas.ConfUnifyResIn):
-    db.query(models.ConfUnifyRes).filter(
-        models.ConfUnifyRes.id == id_
-    ).update(conf_unify_res.dict())
-    db.commit()
+    result = await db.execute(select(models.ConfUnifyRes))
+    return result.scalars().all()
 
 
-async def del_unify_res(db: Session, id_: int):
-    db.query(models.ConfUnifyRes).filter(
-        models.ConfUnifyRes.id == id_,
-    ).delete()
-    db.commit()
+async def update_unify_res(db: AsyncSession, id_: int, conf_unify_res: schemas.ConfUnifyResIn):
+    await db.execute(
+        update(models.ConfUnifyRes).where(models.ConfUnifyRes.id == id_).values(conf_unify_res.dict())
+    )
+    await db.commit()
+
+
+async def del_unify_res(db: AsyncSession, id_: int):
+    await db.execute(
+        delete(models.ConfUnifyRes).where(models.ConfUnifyRes.id == id_)
+    )
+    await db.commit()
 
 
 """
@@ -175,39 +220,52 @@ async def del_unify_res(db: Session, id_: int):
 """
 
 
-async def create_customize(db: Session, conf_customize: schemas.ConfCustomizeIn):
+async def create_customize(db: AsyncSession, conf_customize: schemas.ConfCustomizeIn):
     db_info = models.ConfCustomize(**conf_customize.dict())
     db.add(db_info)
-    db.commit()
-    db.refresh(db_info)
+    await db.commit()
+    await db.refresh(db_info)
     return db_info
 
 
-async def get_customize(db: Session, id_: int = None, name: str = None, ids: list = None, key: str = None):
+async def get_customize(db: AsyncSession, id_: int = None, name: str = None, ids: list = None, key: str = None):
     if id_:
-        return db.query(models.ConfCustomize).filter(models.ConfCustomize.id == id_).all()
+        result = await db.execute(
+            select(models.ConfCustomize).filter(models.ConfCustomize.id == id_)
+        )
+        return result.scalars().all()
 
     if name:
-        return db.query(models.ConfCustomize).filter(models.ConfCustomize.name == name).all()
+        result = await db.execute(
+            select(models.ConfCustomize).filter(models.ConfCustomize.name == name)
+        )
+        return result.scalars().all()
 
     if key:
-        return db.query(models.ConfCustomize).filter(models.ConfCustomize.key == key).all()
+        result = await db.execute(
+            select(models.ConfCustomize).filter(models.ConfCustomize.key == key)
+        )
+        return result.scalars().all()
 
     if ids:
-        return db.query(models.ConfCustomize).filter(models.ConfCustomize.id.in_(ids)).all()
+        result = await db.execute(
+            select(models.ConfCustomize).filter(models.ConfCustomize.id.in_(ids))
+        )
+        return result.scalars().all()
 
-    return db.query(models.ConfCustomize).all()
-
-
-async def update_customize(db: Session, id_: int, conf_customize: schemas.ConfCustomizeIn):
-    db.query(models.ConfCustomize).filter(
-        models.ConfCustomize.id == id_
-    ).update(conf_customize.dict())
-    db.commit()
+    result = await db.execute(select(models.ConfCustomize))
+    return result.scalars().all()
 
 
-async def del_customize(db: Session, id_: int):
-    db.query(models.ConfCustomize).filter(
-        models.ConfCustomize.id == id_,
-    ).delete()
-    db.commit()
+async def update_customize(db: AsyncSession, id_: int, conf_customize: schemas.ConfCustomizeIn):
+    await db.execute(
+        update(models.ConfCustomize).where(models.ConfCustomize.id == id_).values(conf_customize.dict())
+    )
+    await db.commit()
+
+
+async def del_customize(db: AsyncSession, id_: int):
+    await db.execute(
+        delete(models.ConfCustomize).where(models.ConfCustomize.id == id_)
+    )
+    await db.commit()

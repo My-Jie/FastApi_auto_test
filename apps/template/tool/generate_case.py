@@ -12,14 +12,14 @@ from typing import List, Any
 from apps.template import schemas
 from apps.case_service.tool import my_auto_check
 from tools.tips import TIPS
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class GenerateCase:
 
     async def read_template_to_api(
             self,
-            db: Session,
+            db: AsyncSession,
             temp_name: str,
             mode: str,
             fail_stop: bool,

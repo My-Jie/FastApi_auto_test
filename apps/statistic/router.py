@@ -7,7 +7,7 @@
 @Time: 2023/7/12-14:43
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends
 from .tool import api_free, ui_free
 from depends import get_db
@@ -29,7 +29,7 @@ statistic = APIRouter()
 async def e_charts_free(
         page: int = 1,
         size: int = 1000,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     由后端处理，输出统计数据，满足free的数据结构
@@ -51,7 +51,7 @@ async def e_charts_free(
 async def get_e_charts_free(
         page: int = 1,
         size: int = 1000,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     temp_info = await ui_crud.get_playwright(db=db, page=page, size=size)
     case_info = await ui_crud.get_play_case_data(db=db)
@@ -70,7 +70,7 @@ async def get_playwright_list(
         temp_name: str = None,
         page: int = 1,
         size: int = 1000,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     获取playwright列表
@@ -100,7 +100,7 @@ async def case_data_echarts(
         case_name: str = None,
         page: int = 1,
         size: int = 1000,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     """
     查看测试用例统计
@@ -126,7 +126,7 @@ async def case_data_echarts(
     '/get/all/count',
     name='获取所有的统计数据计数'
 )
-async def get_all_statistic(db: Session = Depends(get_db)):
+async def get_all_statistic(db: AsyncSession = Depends(get_db)):
     return {
         'temp_count': await temp_crud.get_count(db=db),
         'case_count': await case_crud.get_count(db=db),
@@ -140,7 +140,7 @@ async def get_all_statistic(db: Session = Depends(get_db)):
     '/get/case/count',
     name='获取用例统计数据'
 )
-async def get_case_count(db: Session = Depends(get_db)):
+async def get_case_count(db: AsyncSession = Depends(get_db)):
     return {
         'case_count': await case_crud.get_count(db=db),
         'case_today': await case_crud.get_count(db=db, today=True),
@@ -157,7 +157,7 @@ async def get_case_count(db: Session = Depends(get_db)):
     '/get/temp/count',
     name='获取模板统计数据'
 )
-async def get_temp_count(db: Session = Depends(get_db)):
+async def get_temp_count(db: AsyncSession = Depends(get_db)):
     return {
         'temp_count': await temp_crud.get_count(db=db),
         'temp_today': await temp_crud.get_count(db=db, today=True),

@@ -9,15 +9,15 @@
 
 import datetime
 from typing import List
-from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select, delete, update
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 from apps.template import models, schemas
 from apps.case_service import models as case_models
 from apps.api_report import models as report_models
 
 
-async def create_template(db: Session, temp_name: str, project_name: int):
+async def create_template(db: AsyncSession, temp_name: str, project_name: int):
     """
     创建模板信息
     :param db:
@@ -27,12 +27,12 @@ async def create_template(db: Session, temp_name: str, project_name: int):
     """
     db_temp = models.Template(temp_name=temp_name, project_name=project_name)
     db.add(db_temp)
-    db.commit()
-    db.refresh(db_temp)
+    await db.commit()
+    await db.refresh(db_temp)
     return db_temp
 
 
-async def update_template(db: Session, temp_id: int, api_count: int = None):
+async def update_template(db: AsyncSession, temp_id: int, api_count: int = None):
     """
     更新模板信息
     :param db:
@@ -40,15 +40,18 @@ async def update_template(db: Session, temp_id: int, api_count: int = None):
     :param api_count:
     :return:
     """
-    db_temp = db.query(models.Template).filter(models.Template.id == temp_id).first()
+    result = await db.execute(
+        select(models.Template).where(models.Template.id == temp_id)
+    )
+    db_temp = result.scalars().first()
     if db_temp:
         db_temp.api_count = api_count
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
 
 
-async def create_template_data(db: Session, data: schemas.TemplateDataIn, temp_id: int):
+async def create_template_data(db: AsyncSession, data: schemas.TemplateDataIn, temp_id: int):
     """
     创建模板数据集
     :param db:
@@ -58,12 +61,12 @@ async def create_template_data(db: Session, data: schemas.TemplateDataIn, temp_i
     """
     db_data = models.TemplateData(**data.dict(), temp_id=temp_id)
     db.add(db_data)
-    db.commit()
-    db.refresh(db_data)
+    await db.commit()
+    await db.refresh(db_data)
     return db_data
 
 
-async def create_template_data_add(db: Session, data: schemas.TemplateDataInTwo):
+async def create_template_data_add(db: AsyncSession, data: schemas.TemplateDataInTwo):
     """
     创建模板数据集
     :param db:
@@ -72,12 +75,12 @@ async def create_template_data_add(db: Session, data: schemas.TemplateDataInTwo)
     """
     db_data = models.TemplateData(**data.dict())
     db.add(db_data)
-    db.commit()
-    db.refresh(db_data)
+    await db.commit()
+    await db.refresh(db_data)
     return db_data
 
 
-async def update_template_data(db: Session, temp_id: int, id_: int, new_number: int, old_number: int = None):
+async def update_template_data(db: AsyncSession, temp_id: int, id_: int, new_number: int, old_number: int = None):
     """
     更新模板信息
     :param db:
@@ -88,25 +91,32 @@ async def update_template_data(db: Session, temp_id: int, id_: int, new_number: 
     :return:
     """
     if old_number:
-        db_temp = db.query(models.TemplateData).filter(
-            models.TemplateData.id == id_,
-            models.TemplateData.temp_id == temp_id,
-            models.TemplateData.number == old_number
-        ).first()
+        result = await db.execute(
+            select(models.TemplateData).where(
+                models.TemplateData.id == id_,
+                models.TemplateData.temp_id == temp_id,
+                models.TemplateData.number == old_number
+            )
+        )
+        db_temp = result.scalars().first()
     else:
-        db_temp = db.query(models.TemplateData).filter(
-            models.TemplateData.id == id_,
-            models.TemplateData.temp_id == temp_id,
-        ).first()
+        result = await db.execute(
+            select(models.TemplateData).where(
+                models.TemplateData.id == id_,
+                models.TemplateData.temp_id == temp_id,
+            )
+        )
+        db_temp = result.scalars().first()
+
     if db_temp:
         db_temp.number = new_number
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
 
 
 async def get_temp_name(
-        db: Session,
+        db: AsyncSession,
         temp_name: str = None,
         temp_id: int = None,
         like: bool = False,
@@ -124,24 +134,36 @@ async def get_temp_name(
     :return:
     """
     if temp_id is not None:
-        return db.query(models.Template).filter(models.Template.id == temp_id).order_by(models.Template.id.desc()).all()
+        result = await db.execute(
+            select(models.Template).where(models.Template.id == temp_id).order_by(models.Template.id.desc())
+        )
+        return result.scalars().all()
 
     if temp_name:
         if like:
-            return db.query(models.Template).filter(
-                models.Template.temp_name.like(f"%{temp_name}%"),
-            ).order_by(
-                models.Template.id.desc()
-            ).offset(size * (page - 1)).limit(size)
+            result = await db.execute(
+                select(models.Template).where(
+                    models.Template.temp_name.like(f"%{temp_name}%")
+                ).order_by(
+                    models.Template.id.desc()
+                ).offset(size * (page - 1)).limit(size)
+            )
+            return result.scalars().all()
         else:
-            return db.query(models.Template).filter(models.Template.temp_name == temp_name).order_by(
-                models.Template.id.desc()
-            ).all()
+            result = await db.execute(
+                select(models.Template).where(models.Template.temp_name == temp_name).order_by(
+                    models.Template.id.desc()
+                )
+            )
+            return result.scalars().all()
 
-    return db.query(models.Template).order_by(models.Template.id.desc()).offset(size * (page - 1)).limit(size)
+    result = await db.execute(
+        select(models.Template).order_by(models.Template.id.desc()).offset(size * (page - 1)).limit(size)
+    )
+    return result.scalars().all()
 
 
-async def get_temp_case_info(db: Session, temp_id: int, outline: bool):
+async def get_temp_case_info(db: AsyncSession, temp_id: int, outline: bool):
     """
     查询模板下有多少条用例
     :param db:
@@ -149,17 +171,23 @@ async def get_temp_case_info(db: Session, temp_id: int, outline: bool):
     :param outline:
     :return:
     """
-    db_case = db.query(case_models.TestCase).filter(case_models.TestCase.temp_id == temp_id).order_by(
-        case_models.TestCase.id
-    ).all()
+    result = await db.execute(
+        select(case_models.TestCase).where(case_models.TestCase.temp_id == temp_id).order_by(
+            case_models.TestCase.id
+        )
+    )
+    db_case = result.scalars().all()
     case_info = []
     for case in db_case:
         if outline is False:
-            report = db.query(report_models.ApiReportList).filter(
-                report_models.ApiReportList.case_id == case.id,
-            ).order_by(
-                report_models.ApiReportList.id.desc()
-            ).first()
+            result = await db.execute(
+                select(report_models.ApiReportList).where(
+                    report_models.ApiReportList.case_id == case.id,
+                ).order_by(
+                    report_models.ApiReportList.id.desc()
+                )
+            )
+            report = result.scalars().first()
             case_info.append({
                 'id': case.id,
                 'mode': case.mode,
@@ -175,7 +203,7 @@ async def get_temp_case_info(db: Session, temp_id: int, outline: bool):
     return {'case_count': len(db_case), 'case_info': case_info} if outline is False else {'case_info': case_info}
 
 
-async def get_template_data(db: Session, temp_name: str = None, temp_id: int = None, numbers: list = None):
+async def get_template_data(db: AsyncSession, temp_name: str = None, temp_id: int = None, numbers: list = None):
     """
     查询模板数据
     :param db:
@@ -185,27 +213,39 @@ async def get_template_data(db: Session, temp_name: str = None, temp_id: int = N
     :return:
     """
     if temp_name:
-        db_temp = db.query(models.Template).filter(models.Template.temp_name == temp_name).first()
+        result = await db.execute(
+            select(models.Template).where(models.Template.temp_name == temp_name)
+        )
+        db_temp = result.scalars().first()
         if db_temp:
-            return db.query(models.TemplateData).filter(models.TemplateData.temp_id == db_temp.id).order_by(
-                models.TemplateData.number
-            ).all()
+            result = await db.execute(
+                select(models.TemplateData).where(models.TemplateData.temp_id == db_temp.id).order_by(
+                    models.TemplateData.number
+                )
+            )
+            return result.scalars().all()
 
     if temp_id and numbers:
-        return db.query(models.TemplateData).filter(
-            models.TemplateData.temp_id == temp_id,
-            models.TemplateData.number.in_(numbers),
-        ).order_by(
-            models.TemplateData.number
-        ).all()
+        result = await db.execute(
+            select(models.TemplateData).where(
+                models.TemplateData.temp_id == temp_id,
+                models.TemplateData.number.in_(numbers),
+            ).order_by(
+                models.TemplateData.number
+            )
+        )
+        return result.scalars().all()
 
     if temp_id:
-        return db.query(models.TemplateData).filter(models.TemplateData.temp_id == temp_id).order_by(
-            models.TemplateData.number
-        ).all()
+        result = await db.execute(
+            select(models.TemplateData).where(models.TemplateData.temp_id == temp_id).order_by(
+                models.TemplateData.number
+            )
+        )
+        return result.scalars().all()
 
 
-async def get_tempdata_detail(db: Session, detail_id: int, temp_name: bool = None):
+async def get_tempdata_detail(db: AsyncSession, detail_id: int, temp_name: bool = None):
     """
     查询模板数据
     :param db:
@@ -214,30 +254,37 @@ async def get_tempdata_detail(db: Session, detail_id: int, temp_name: bool = Non
     :return:
     """
     if temp_name:
-        return db.query(models.TemplateData, models.Template).filter(
-            models.TemplateData.id == detail_id,
-        ).filter(
-            models.TemplateData.temp_id == models.Template.id
-        ).first()
+        result = await db.execute(
+            select(models.TemplateData, models.Template).where(
+                models.TemplateData.id == detail_id,
+            ).where(
+                models.TemplateData.temp_id == models.Template.id
+            )
+        )
+        return result.first()
 
-    return db.query(models.TemplateData).filter(
-        models.TemplateData.id == detail_id,
-    ).first()
+    result = await db.execute(
+        select(models.TemplateData).where(models.TemplateData.id == detail_id)
+    )
+    return result.scalars().first()
 
 
-async def get_temp_host(db: Session, temp_id: int):
+async def get_temp_host(db: AsyncSession, temp_id: int):
     """
     查询模板数据
     :param db:
     :param temp_id:
     :return:
     """
-    return db.query(models.TemplateData.host).filter(models.TemplateData.temp_id == temp_id).order_by(
-        models.TemplateData.number
-    ).all()
+    result = await db.execute(
+        select(models.TemplateData.host).where(models.TemplateData.temp_id == temp_id).order_by(
+            models.TemplateData.number
+        )
+    )
+    return result.all()
 
 
-async def put_temp_name(db: Session, new_name: str, temp_id: int = None, old_name: str = None):
+async def put_temp_name(db: AsyncSession, new_name: str, temp_id: int = None, old_name: str = None):
     """
     更新模板名称
     :param db:
@@ -249,19 +296,25 @@ async def put_temp_name(db: Session, new_name: str, temp_id: int = None, old_nam
     db_temp = None
 
     if temp_id:
-        db_temp = db.query(models.Template).filter(models.Template.id == temp_id).first()
+        result = await db.execute(
+            select(models.Template).where(models.Template.id == temp_id)
+        )
+        db_temp = result.scalars().first()
 
     if old_name:
-        db_temp = db.query(models.Template).filter(models.Template.temp_name == old_name).first()
+        result = await db.execute(
+            select(models.Template).where(models.Template.temp_name == old_name)
+        )
+        db_temp = result.scalars().first()
 
     if db_temp:
         db_temp.temp_name = new_name
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
 
 
-async def put_description(db: Session, new_description: str, api_id: int):
+async def put_description(db: AsyncSession, new_description: str, api_id: int):
     """
     更新模板描述
     :param db:
@@ -269,15 +322,18 @@ async def put_description(db: Session, new_description: str, api_id: int):
     :param api_id:
     :return:
     """
-    db_temp = db.query(models.TemplateData).filter(models.TemplateData.id == api_id).first()
+    result = await db.execute(
+        select(models.TemplateData).where(models.TemplateData.id == api_id)
+    )
+    db_temp = result.scalars().first()
     if db_temp:
         db_temp.description = new_description
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
 
 
-async def del_template_data_all(db: Session, temp_name: str = None, temp_id: int = None):
+async def del_template_data_all(db: AsyncSession, temp_name: str = None, temp_id: int = None):
     """
     删除所有模板数据
     :param db:
@@ -287,19 +343,29 @@ async def del_template_data_all(db: Session, temp_name: str = None, temp_id: int
     """
     db_temp = None
     if temp_name:
-        db_temp = db.query(models.Template).filter(models.Template.temp_name == temp_name).first()
+        result = await db.execute(
+            select(models.Template).where(models.Template.temp_name == temp_name)
+        )
+        db_temp = result.scalars().first()
 
     if temp_id:
-        db_temp = db.query(models.Template).filter(models.Template.id == temp_id).first()
+        result = await db.execute(
+            select(models.Template).where(models.Template.id == temp_id)
+        )
+        db_temp = result.scalars().first()
 
     if db_temp:
-        db.query(models.TemplateData).filter(models.TemplateData.temp_id == db_temp.id).delete()
-        db.query(models.Template).filter(models.Template.id == db_temp.id).delete()
-        db.commit()
+        await db.execute(
+            delete(models.TemplateData).filter(models.TemplateData.temp_id == db_temp.id)
+        )
+        await db.execute(
+            delete(models.Template).filter(models.Template.id == db_temp.id)
+        )
+        await db.commit()
         return db_temp
 
 
-async def del_template_data(db: Session, temp_id: int, number: int):
+async def del_template_data(db: AsyncSession, temp_id: int, number: int):
     """
     删除部分数据
     :param db:
@@ -307,28 +373,29 @@ async def del_template_data(db: Session, temp_id: int, number: int):
     :param number:
     :return:
     """
-    db.query(models.TemplateData).filter(
-        models.TemplateData.temp_id == temp_id,
-        models.TemplateData.number == number
-    ).delete()
+    await db.execute(
+        delete(models.TemplateData).filter(
+            models.TemplateData.temp_id == temp_id,
+            models.TemplateData.number == number
+        )
+    )
+    await db.commit()
 
 
-async def get_all_temp_name(db: Session, temp_ids):
+async def get_all_temp_name(db: AsyncSession, temp_ids):
     """
     获取所有的模板名称
     :param db:
     :param temp_ids:
     :return:
     """
-    db_temp = db.query(
-        models.Template.temp_name
-    ).filter(
-        models.Template.id.in_(temp_ids)
-    ).all()
-    return db_temp
+    result = await db.execute(
+        select(models.Template.temp_name).where(models.Template.id.in_(temp_ids))
+    )
+    return result.scalars().all()
 
 
-async def get_new_temp_info(db: Session, temp_id: int, number: int, method: str):
+async def get_new_temp_info(db: AsyncSession, temp_id: int, number: int, method: str):
     """
 
     :param db:
@@ -337,32 +404,38 @@ async def get_new_temp_info(db: Session, temp_id: int, number: int, method: str)
     :param method:
     :return:
     """
-    return db.query(models.TemplateData).filter(
-        models.TemplateData.temp_id == temp_id,
-        models.TemplateData.number == number,
-        models.TemplateData.method == method
-    ).order_by(
-        models.TemplateData.number
-    ).first()
+    result = await db.execute(
+        select(models.TemplateData).where(
+            models.TemplateData.temp_id == temp_id,
+            models.TemplateData.number == number,
+            models.TemplateData.method == method
+        ).order_by(
+            models.TemplateData.number
+        )
+    )
+    return result.scalars().first()
 
 
-async def get_temp_all(db: Session):
+async def get_temp_all(db: AsyncSession):
     """
     查询所有模板数据
     :param db:
     :return:
     """
-    return db.query(
-        models.TemplateData.temp_id,
-        models.TemplateData.number,
-        models.TemplateData.method,
-        models.TemplateData.path
-    ).order_by(
-        models.TemplateData.id
-    ).all()
+    result = await db.execute(
+        select(models.TemplateData).order_by(
+            models.TemplateData.temp_id,
+            models.TemplateData.number,
+            models.TemplateData.method,
+            models.TemplateData.path
+        ).order_by(
+            models.TemplateData.id
+        )
+    )
+    return result.scalars().all()
 
 
-async def update_api_info(db: Session, api_info: schemas.TemplateDataInTwo):
+async def update_api_info(db: AsyncSession, api_info: schemas.TemplateDataInTwo):
     """
     修改用例api信息
     :param db:
@@ -372,26 +445,28 @@ async def update_api_info(db: Session, api_info: schemas.TemplateDataInTwo):
     if not await get_template_data(db=db, temp_id=api_info.temp_id, numbers=[api_info.number]):
         return False
 
-    db.query(models.TemplateData).filter(
-        models.TemplateData.temp_id == api_info.temp_id,
-        models.TemplateData.number == api_info.number
-    ).update({
-        'host': api_info.host,
-        'path': api_info.path,
-        'code': api_info.code,
-        'method': api_info.method,
-        'params': api_info.params,
-        'json_body': api_info.json_body,
-        'data': api_info.data,
-        'headers': api_info.headers,
-        'response': api_info.response,
-        'description': api_info.description,
-    })
-    db.commit()
+    await db.execute(
+        update(models.TemplateData).filter(
+            models.TemplateData.temp_id == api_info.temp_id,
+            models.TemplateData.number == api_info.number
+        ).values({
+            'host': api_info.host,
+            'path': api_info.path,
+            'code': api_info.code,
+            'method': api_info.method,
+            'params': api_info.params,
+            'json_body': api_info.json_body,
+            'data': api_info.data,
+            'headers': api_info.headers,
+            'response': api_info.response,
+            'description': api_info.description,
+        })
+    )
+    await db.commit()
     return True
 
 
-async def get_temp_numbers(db: Session, temp_id: int, number: int):
+async def get_temp_numbers(db: AsyncSession, temp_id: int, number: int):
     """
     查询某个number后的模板数据
     :param db:
@@ -399,15 +474,18 @@ async def get_temp_numbers(db: Session, temp_id: int, number: int):
     :param number:
     :return:
     """
-    return db.query(models.TemplateData).filter(
-        models.TemplateData.temp_id == temp_id,
-        models.TemplateData.number >= number
-    ).order_by(
-        models.TemplateData.number.desc()
-    ).all()
+    result = await db.execute(
+        select(models.TemplateData).where(
+            models.TemplateData.temp_id == temp_id,
+            models.TemplateData.number >= number
+        ).order_by(
+            models.TemplateData.number.desc()
+        )
+    )
+    return result.scalars().all()
 
 
-async def get_count(db: Session, temp_name: str = None, today: bool = None):
+async def get_count(db: AsyncSession, temp_name: str = None, today: bool = None):
     """
     记数查询
     :param db:
@@ -416,19 +494,28 @@ async def get_count(db: Session, temp_name: str = None, today: bool = None):
     :return:
     """
     if temp_name:
-        return db.query(func.count(models.Template.id)).filter(
-            models.Template.temp_name.like(f"%{temp_name}%")
-        ).scalar()
+        result = await db.execute(
+            select(func.count(models.Template.id)).where(
+                models.Template.temp_name.like(f"%{temp_name}%")
+            )
+        )
+        return result.scalar()
 
     if today:
-        return db.query(func.count(models.Template.id)).filter(
-            models.Template.created_at >= datetime.datetime.now().date()
-        ).scalar()
+        result = await db.execute(
+            select(func.count(models.Template.id)).where(
+                models.Template.created_at >= datetime.datetime.now().date()
+            )
+        )
+        return result.scalar()
 
-    return db.query(func.count(models.Template.id)).scalar()
+    result = await db.execute(
+        select(func.count(models.Template.id))
+    )
+    return result.scalar()
 
 
-async def get_api_count(db: Session, today: bool = None):
+async def get_api_count(db: AsyncSession, today: bool = None):
     """
     记数查询
     :param db:
@@ -436,15 +523,21 @@ async def get_api_count(db: Session, today: bool = None):
     :return:
     """
     if today:
-        return db.query(func.count(models.TemplateData.id)).filter(
-            models.TemplateData.created_at >= datetime.datetime.now().date()
-        ).scalar()
+        result = await db.execute(
+            select(func.count(models.TemplateData.id)).where(
+                models.TemplateData.created_at >= datetime.datetime.now().date()
+            )
+        )
+        return result.scalar()
 
-    return db.query(func.count(models.TemplateData.id)).scalar()
+    result = await db.execute(
+        select(func.count(models.TemplateData.id))
+    )
+    return result.scalar()
 
 
 async def save_temp_info(
-        db: Session,
+        db: AsyncSession,
         temp_id: int = None,
         number: int = None,
         detail_id: int = None,
@@ -456,14 +549,20 @@ async def save_temp_info(
     更新用例的数据
     """
     if detail_id:
-        db_temp = db.query(models.TemplateData).filter(
-            models.TemplateData.id == detail_id,
-        ).first()
+        result = await db.execute(
+            select(models.TemplateData).where(
+                models.TemplateData.id == detail_id
+            )
+        )
+        db_temp = result.scalars().first()
     else:
-        db_temp = db.query(models.TemplateData).filter(
-            models.TemplateData.temp_id == temp_id,
-            models.TemplateData.number == number,
-        ).first()
+        result = await db.execute(
+            select(models.TemplateData).where(
+                models.TemplateData.temp_id == temp_id,
+                models.TemplateData.number == number,
+            )
+        )
+        db_temp = result.scalars().first()
 
     if db_temp:
         if params is not None:
@@ -478,31 +577,34 @@ async def save_temp_info(
             db_temp.headers = headers
             flag_modified(db_temp, "headers")
 
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
 
 
-async def save_path_info(db: Session, temp_id: int, number: int, api_path: dict):
+async def save_path_info(db: AsyncSession, temp_id: int, number: int, api_path: dict):
     """
     更新用例的path
     """
-    db_temp = db.query(models.TemplateData).filter(
-        models.TemplateData.temp_id == temp_id,
-        models.TemplateData.number == number,
-    ).first()
+    result = await db.execute(
+        select(models.TemplateData).where(
+            models.TemplateData.temp_id == temp_id,
+            models.TemplateData.number == number,
+        )
+    )
+    db_temp = result.scalars().first()
 
     if db_temp:
         db_temp.method = api_path['method']
         db_temp.path = api_path['path']
         db_temp.code = api_path['code']
-        db.commit()
-        db.refresh(db_temp)
+        await db.commit()
+        await db.refresh(db_temp)
         return db_temp
 
 
 async def sync_temp(
-        db: Session,
+        db: AsyncSession,
         number: int,
         method: str,
         path: str,
@@ -522,20 +624,26 @@ async def sync_temp(
     :return:
     """
     if not temp_all:
-        db_temp = db.query(models.TemplateData, models.Template).filter(
-            models.TemplateData.temp_id == temp_id,
-            models.TemplateData.method == method,
-            models.TemplateData.path == path,
-        ).filter(
-            models.TemplateData.temp_id == models.Template.id
-        ).all()
+        result = await db.execute(
+            select(models.TemplateData, models.Template).where(
+                models.TemplateData.temp_id == temp_id,
+                models.TemplateData.method == method,
+                models.TemplateData.path == path,
+            ).filter(
+                models.TemplateData.temp_id == models.Template.id
+            )
+        )
+        db_temp = result.all()
     else:
-        db_temp = db.query(models.TemplateData, models.Template).filter(
-            models.TemplateData.method == method,
-            models.TemplateData.path == path,
-        ).filter(
-            models.TemplateData.temp_id == models.Template.id
-        ).all()
+        result = await db.execute(
+            select(models.TemplateData, models.Template).where(
+                models.TemplateData.method == method,
+                models.TemplateData.path == path,
+            ).filter(
+                models.TemplateData.temp_id == models.Template.id
+            )
+        )
+        db_temp = result.all()
 
     temp_list = []
     for x in db_temp:
@@ -567,16 +675,19 @@ async def sync_temp(
     return temp_list
 
 
-async def get_temp_data_group(db: Session, temp_ids: List[int]):
+async def get_temp_data_group(db: AsyncSession, temp_ids: List[int]):
     """
     获取模板分组
     :param db:
     :param temp_ids:
     :return:
     """
-    return db.query(models.Template, models.TemplateData).filter(
-        models.TemplateData.temp_id.in_(temp_ids),
-        models.Template.id == models.TemplateData.temp_id
-    ).order_by(
-        models.TemplateData.temp_id
-    ).all()
+    result = await db.execute(
+        select(models.Template, models.TemplateData).filter(
+            models.TemplateData.temp_id.in_(temp_ids),
+            models.Template.id == models.TemplateData.temp_id
+        ).order_by(
+            models.TemplateData.temp_id
+        )
+    )
+    return result.all()

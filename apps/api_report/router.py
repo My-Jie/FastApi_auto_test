@@ -10,9 +10,7 @@
 from typing import List
 from fastapi import APIRouter, Depends
 from depends import get_db
-from sqlalchemy.orm import Session
-from apps import response_code
-
+from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api_report import schemas, crud
 
 api_report = APIRouter()
@@ -27,7 +25,7 @@ async def report_list(
         case_id: int,
         page: int = 1,
         size: int = 10,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     return await crud.get_api_list(db=db, case_id=case_id, page=page, size=size)
 
@@ -40,7 +38,7 @@ async def report_detail(
         report_id: int,
         page: int = 1,
         size: int = 10,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     return await crud.get_api_detail(db=db, report_id=report_id, page=page, size=size)
 
@@ -51,7 +49,7 @@ async def report_detail(
 )
 async def del_report(
         case_id: int,
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_db)
 ):
     report_id = await crud.get_api_list(db=db, case_id=case_id)
     if not report_id:
@@ -62,4 +60,4 @@ async def del_report(
         await crud.delete_api_report(db=db, report_id=i.id)
         await crud.delete_api_detail(db=db, report_id=i.id)
     else:
-        db.commit()
+        await db.commit()

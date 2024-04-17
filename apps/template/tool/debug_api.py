@@ -11,7 +11,7 @@ import copy
 import json
 import aiohttp
 from aiohttp import client_exceptions
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from apps.template import schemas
 from apps import response_code
 from tools import get_cookie as cookie_info
@@ -21,7 +21,7 @@ RESPONSE_INFO = {}
 COOKIE_INFO = {}
 
 
-async def send_api(db: Session, api_info: schemas.TemplateDataInTwo, get_cookie: bool):
+async def send_api(db: AsyncSession, api_info: schemas.TemplateDataInTwo, get_cookie: bool):
     """
     调试接口专用方法
     :return:

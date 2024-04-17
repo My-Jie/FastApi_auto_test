@@ -13,8 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 # 引擎
 async_engine = create_async_engine(
     url=setting['sqlite'],
-    # connect_args={"check_same_thread": True},
-    echo=True
+    connect_args={"check_same_thread": False},
+    # echo=True
 )
 # 会话
 async_session_local = async_sessionmaker(

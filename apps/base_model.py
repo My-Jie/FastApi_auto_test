@@ -10,13 +10,11 @@
 
 from datetime import datetime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy.sql import func
 from sqlalchemy import Integer, DateTime
 
 
 class Base(DeclarativeBase):
     __abstract__ = True
-    __table_args__ = {"extend_existing": True}
 
     id: Mapped[int] = mapped_column(
         Integer,
@@ -27,12 +25,12 @@ class Base(DeclarativeBase):
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        server_default=func.now(),
+        default=datetime.now(),
         comment='创建时间'
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        server_default=func.now(),
-        onupdate=func.now(),
+        default=datetime.now(),
+        onupdate=datetime.now(),
         comment='更新时间'
     )

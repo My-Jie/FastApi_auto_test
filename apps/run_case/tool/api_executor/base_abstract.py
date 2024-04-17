@@ -9,7 +9,6 @@
 """
 
 import abc
-from sqlalchemy.orm import Session
 
 
 class ApiBase(abc.ABC):

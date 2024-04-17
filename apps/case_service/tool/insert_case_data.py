@@ -7,11 +7,11 @@
 @Time: 2022/8/21-21:54
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from apps.case_service import schemas, crud
 
 
-async def cover_insert(db: Session, case_id: int, case_data: dict):
+async def cover_insert(db: AsyncSession, case_id: int, case_data: dict):
     """
     覆盖数据写入
     :param db:
@@ -29,16 +29,17 @@ async def cover_insert(db: Session, case_id: int, case_data: dict):
             data['headers'] = {}
         await crud.create_test_case_data(db=db, data=schemas.TestCaseDataIn(**data), case_id=case_id)
         case_count += 1
-    db.commit()
+    await db.commit()
 
     return await crud.update_test_case(db=db, case_id=case_id, case_count=case_count)
 
 
-async def insert(db: Session, case_name: str, temp_id: int, case_data: dict):
+async def insert(db: AsyncSession, case_name: str, temp_id: int, case_data: dict):
     """
     新建测试数据
     :param db:
     :param case_name:
+    :param temp_id:
     :param case_data:
     :return:
     """
@@ -50,6 +51,6 @@ async def insert(db: Session, case_name: str, temp_id: int, case_data: dict):
             data['headers'] = {}
         await crud.create_test_case_data(db=db, data=schemas.TestCaseDataIn(**data), case_id=db_case.id)
         case_count += 1
-    db.commit()
+    await db.commit()
 
     return await crud.update_test_case(db=db, case_id=db_case.id, case_count=case_count)

@@ -8,12 +8,14 @@
 """
 
 from tools.database import async_session_local
+from sqlalchemy.exc import SQLAlchemyError
 
 
 async def get_db():
     try:
         async with async_session_local() as db:
             yield db
-    finally:
+    except SQLAlchemyError:
         await db.rollback()
+    finally:
         await db.close()

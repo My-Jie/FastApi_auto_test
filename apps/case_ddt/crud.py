@@ -9,12 +9,12 @@
 
 import datetime
 from typing import List
-from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select, delete
+from sqlalchemy.ext.asyncio import AsyncSession
 from apps.case_ddt import models, schemas
 
 
-async def create_test_gather(db: Session, data: schemas.TestGrater):
+async def create_test_gather(db: AsyncSession, data: schemas.TestGrater):
     """
     创建模板数据集
     :param db:
@@ -23,12 +23,12 @@ async def create_test_gather(db: Session, data: schemas.TestGrater):
     """
     db_data = models.TestGather(**data.dict())
     db.add(db_data)
-    db.commit()
-    db.refresh(db_data)
+    await db.commit()
+    await db.refresh(db_data)
     return db_data
 
 
-async def del_test_gather(db: Session, case_id: int, suite: list = None):
+async def del_test_gather(db: AsyncSession, case_id: int, suite: list = None):
     """
     删除测试数据集
     :param db:
@@ -37,18 +37,24 @@ async def del_test_gather(db: Session, case_id: int, suite: list = None):
     :return:
     """
     if suite:
-        db.query(models.TestGather).filter(
-            models.TestGather.case_id == case_id,
-            models.TestGather.suite.in_(suite)
-        ).delete()
-        db.commit()
+        await db.execute(
+            delete(
+                models.TestGather
+            ).filter(
+                models.TestGather.case_id == case_id,
+                models.TestGather.suite.in_(suite)
+            )
+        )
+        await db.commit()
         return
 
-    db.query(models.TestGather).filter(models.TestGather.case_id == case_id).delete()
-    db.commit()
+    await db.execute(
+        delete(models.TestGather).filter(models.TestGather.case_id == case_id)
+    )
+    await db.commit()
 
 
-async def get_gather(db: Session, case_id: int, number: int = None, suite: List[int] = None):
+async def get_gather(db: AsyncSession, case_id: int, number: int = None, suite: List[int] = None):
     """
     模糊查询url
     :param db:
@@ -58,32 +64,47 @@ async def get_gather(db: Session, case_id: int, number: int = None, suite: List[
     :return:
     """
     if suite:
-        return db.query(models.TestGather).filter(
-            models.TestGather.case_id == case_id,
-            models.TestGather.suite.in_(suite)
+        result = await db.execute(
+            select(
+                models.TestGather
+            ).filter(
+                models.TestGather.case_id == case_id,
+                models.TestGather.suite.in_(suite)
+            ).order_by(
+                models.TestGather.suite
+            ).order_by(
+                models.TestGather.number
+            )
+        )
+        return result.scalars().all()
+
+    result = await db.execute(
+        select(
+            models.TestGather
+        ).filter(
+            models.TestGather.case_id == case_id
         ).order_by(
             models.TestGather.suite
         ).order_by(
             models.TestGather.number
-        ).all()
-
-    return db.query(models.TestGather).filter(models.TestGather.case_id == case_id).order_by(
-        models.TestGather.suite
-    ).order_by(
-        models.TestGather.number
-    ).all()
+        )
+    )
+    return result.scalars().all()
 
 
-async def get_all(db: Session):
+async def get_all(db: AsyncSession):
     """
     查询全部的数据集
     :param db:
     :return:
     """
-    return db.query(models.TestGather).all()
+    result = await db.execute(
+        select(models.TestGather)
+    )
+    return result.scalars().all()
 
 
-async def get_count(db: Session, today: bool = None):
+async def get_count(db: AsyncSession, today: bool = None):
     """
     记数查询
     :param db:
@@ -91,8 +112,16 @@ async def get_count(db: Session, today: bool = None):
     :return:
     """
     if today:
-        return db.query(func.count(models.TestGather.suite.distinct())).filter(
-            models.TestGather.created_at >= datetime.datetime.now().date()
-        ).scalar()
+        result = await db.execute(
+            select(
+                func.count(models.TestGather.suite.distinct())
+            ).filter(
+                models.TestGather.created_at >= datetime.datetime.now().date()
+            )
+        )
+        return result.scalar()
 
-    return db.query(func.count(models.TestGather.suite.distinct())).scalar()
+    result = await db.execute(
+        select(func.count(models.TestGather.suite.distinct()))
+    )
+    return result.scalar()
