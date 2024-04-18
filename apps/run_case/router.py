@@ -52,7 +52,8 @@ async def run_case_name(ids: schemas.RunCase, db: AsyncSession = Depends(get_db)
         report_list = await run_service_case(
             db=db,
             case_ids=ids.case_ids,
-            setting_info_dict=SETTING_INFO_DICT.get(ids.setting_list_id, {})
+            setting_info_dict=SETTING_INFO_DICT.get(ids.setting_list_id, {}),
+            sync=ids.sync
         )
     except ValueError as e:
         return await response_code.resp_400(message=str(e))

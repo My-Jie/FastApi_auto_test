@@ -33,19 +33,20 @@ from .handle_playwright import replace_playwright
 from apps.run_case.tool.api_executor.executor_service import ExecutorService
 
 
-async def run_service_case(db: AsyncSession, case_ids: list, setting_info_dict: dict = None):
+async def run_service_case(db: AsyncSession, case_ids: list, setting_info_dict: dict = None, sync: bool = True):
     """
     执行业务流程用例
     :param db:
     :param case_ids:
     :param setting_info_dict：
+    :param sync：
     :return:
     """
     executor = ExecutorService(db=db)
     await executor.collect_sql(case_ids=case_ids)
     await executor.collect_config(setting_info_dict=setting_info_dict)
     await executor.collect_req_data()
-    await executor.executor_api()
+    await executor.executor_api(sync=sync)
     await executor.collect_report()
 
     return executor.report_list

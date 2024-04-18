@@ -157,7 +157,14 @@ class ExecutorService(ApiBase):
                 except client_exceptions.ClientConnectorError as e:
                     logger.error(e)
         else:
-            pass
+            tasks = [
+                asyncio.create_task(
+                    self._run_api(
+                        api_list=api_list
+                    )
+                ) for api_list in self.api_group
+            ]
+            await asyncio.gather(*tasks)
 
     async def collect_report(self):
         """
@@ -245,24 +252,20 @@ class ExecutorService(ApiBase):
             else:
                 report['time']['avg_time'] = report['time']['total_time'] / report['result']['run_api']
 
-            async def save_report():
-                async with async_session_local() as db:
-                    # 写入报告列表
-                    db_data = await report_crud.create_api_list(db=db, data=report_schemas.ApiReportListInt(**report))
-                    # 写入详情列表
-                    await report_crud.create_api_detail(
-                        db=db,
-                        data=[x for x in api_list if x['report']['is_executor']],
-                        report_id=db_data.id
-                    )
-                    # 更新用例次数
-                    await run_crud.update_test_case_order(
-                        db=db,
-                        case_id=report['case_id'],
-                        is_fail={0: False, 1: True}.get(report['result']['result'])
-                    )
-
-            asyncio.create_task(save_report())
+            # 写入报告列表
+            db_data = await report_crud.create_api_list(db=self._db, data=report_schemas.ApiReportListInt(**report))
+            # 写入详情列表
+            await report_crud.create_api_detail(
+                db=self._db,
+                data=[x for x in api_list if x['report']['is_executor']],
+                report_id=db_data.id
+            )
+            # 更新用例次数
+            await run_crud.update_test_case_order(
+                db=self._db,
+                case_id=report['case_id'],
+                is_fail={0: False, 1: True}.get(report['result']['result'])
+            )
 
             self.report_list.append(report)
             CASE_RESPONSE[report['case_id']] = copy.deepcopy(api_list)
@@ -365,7 +368,7 @@ class ExecutorService(ApiBase):
             api['report']['result'] = 1 if [x for x in api['assert_info'][-1] if x['result'] == 1] else 0
             api['report']['is_executor'] = True
             logger.info(
-                f"{api['api_info']['case_id']}-{api['api_info']['number']}-"
+                f"{api['api_info']['case_id']}-({api['api_info']['number']}/{len(api_list) - 1})-"
                 f"{api['request_info']['url']} {dict({0: 'SUCCESS', 1: 'FAIL'}).get(api['report']['result'])}"
             )
 

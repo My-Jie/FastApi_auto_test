@@ -24,6 +24,7 @@ class TempHosts(BaseModel):
 class RunCase(BaseModel):
     case_ids: List[int]
     setting_list_id: str = ''
+    sync: Optional[bool] = True
 
 
 class RunTemp(BaseModel):
