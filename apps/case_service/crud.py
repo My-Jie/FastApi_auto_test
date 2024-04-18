@@ -13,6 +13,10 @@ from sqlalchemy import func, select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 from apps.case_service import models, schemas
+from apps.whole_conf import models as conf_models
+from apps.template import models as temp_models
+from apps.api_report import models as report_models
+
 from typing import List
 
 
@@ -108,18 +112,14 @@ async def del_test_case_data(db: AsyncSession, case_id: int, number: int = None)
 
 async def get_case_info(
         db: AsyncSession,
-        case_name: str = None,
         case_id: int = None,
-        all_: bool = False,
         page: int = 1,
         size: int = 10
 ):
     """
     按用例名称查询数据
     :param db:
-    :param case_name:
     :param case_id:
-    :param all_:
     :param page:
     :param size::
     :return:
@@ -127,21 +127,6 @@ async def get_case_info(
     if case_id is not None:
         result = await db.execute(
             select(models.TestCase).filter(models.TestCase.id == case_id).order_by(models.TestCase.id.desc())
-        )
-        return result.scalars().all()
-
-    if case_name:
-        result = await db.execute(
-            select(models.TestCase).filter(
-                models.TestCase.case_name.like(f"%{case_name}%")
-            ).order_by(
-                models.TestCase.id.desc()).offset(size * (page - 1)).limit(size)
-        )
-        return result.scalars().all()
-
-    if all_:
-        result = await db.execute(
-            select(models.TestCase).order_by(models.TestCase.id.desc())
         )
         return result.scalars().all()
 
@@ -607,5 +592,44 @@ async def get_case_data_group(db: AsyncSession, case_ids: List[int]):
             models.TestCaseData.case_id.in_(case_ids),
             models.TestCase.id == models.TestCaseData.case_id
         )
+    )
+    return result.all()
+
+
+async def get_case_all_info(
+        db: AsyncSession,
+        case_name: str = '',
+        page: int = 1,
+        size: int = 10
+):
+    # 内部查询
+    inner_sel = select(report_models.ApiReportList).order_by(report_models.ApiReportList.created_at.desc())
+    inner_sel_subquery = inner_sel.subquery()
+    outer_sel = select(inner_sel_subquery.c).group_by(inner_sel_subquery.c.case_id)
+    outer_sel_subquery = outer_sel.subquery()
+
+    result = await db.execute(
+        select(
+            models.TestCase,
+            temp_models.Template.temp_name,
+            conf_models.ConfProject.code,
+            outer_sel_subquery.c.created_at
+        ).join(
+            temp_models.Template,
+            models.TestCase.temp_id == temp_models.Template.id,
+            isouter=True
+        ).join(
+            conf_models.ConfProject,
+            temp_models.Template.project_name == conf_models.ConfProject.id,
+            isouter=True
+        ).join(
+            outer_sel_subquery,
+            models.TestCase.id == outer_sel_subquery.c.case_id,
+            isouter=True
+        ).filter(
+            models.TestCase.case_name.like(f"%{case_name}%"),
+        ).order_by(
+            models.TestCase.id.desc()
+        ).offset(size * (page - 1)).limit(size)
     )
     return result.all()

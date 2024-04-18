@@ -91,38 +91,6 @@ async def get_playwright_list(
 
 
 @statistic.get(
-    '/data/case/echarts',
-    response_class=response_code.MyJSONResponse,
-    response_model_exclude_unset=True,
-    name='查看测试用例列表'
-)
-async def case_data_echarts(
-        case_name: str = None,
-        page: int = 1,
-        size: int = 1000,
-        db: AsyncSession = Depends(get_db)
-):
-    """
-    查看测试用例统计
-    """
-    test_case = await case_crud.get_case_info(db=db, case_name=case_name, page=page, size=size)
-
-    case_info = []
-    for case in test_case:
-        temp_info = await temp_crud.get_temp_name(db=db, temp_id=case.temp_id)
-        case_info.append(
-            {
-                "name": f"{temp_info[0].temp_name}-{case.case_name}",
-                "case_id": case.id,
-                "run_order": case.run_order,
-                "success": case.success,
-                "fail": case.fail,
-            }
-        )
-    return case_info
-
-
-@statistic.get(
     '/get/all/count',
     name='获取所有的统计数据计数'
 )

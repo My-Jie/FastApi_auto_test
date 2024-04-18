@@ -56,7 +56,6 @@ class TestCase(BaseModel):
 
 class TempTestCase(TemplateOut):
     case_count: int = None
-    case_info: List[TestCase]
 
     class Config:
         orm_mode = True

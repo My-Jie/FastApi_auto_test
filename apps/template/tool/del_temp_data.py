@@ -8,7 +8,7 @@
 """
 
 from typing import List
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from apps.template import schemas, crud
 
 
@@ -17,7 +17,7 @@ class DelTempData:
     @classmethod
     async def del_data(
             cls,
-            db: Session,
+            db: AsyncSession,
             temp_id: int,
             num_list: list,
             template_data: List[schemas.TemplateDataOut]

@@ -383,15 +383,14 @@ async def delete_name(temp_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @template.get(
-    '/name/list',
+    '/list',
     response_model=schemas.PaginationTempTestCase,
     response_class=response_code.MyJSONResponse,
     response_model_exclude_unset=True,
     name='查询模板数据'
 )
 async def get_templates(
-        temp_name: str = None,
-        temp_id: int = None,
+        temp_name: str = '',
         outline: bool = True,
         page: int = 1,
         size: int = 10,
@@ -402,29 +401,24 @@ async def get_templates(
     2、场景包含的测试用例\n
     3、默认返回所有模板
     """
-    if temp_id:
-        templates = await crud.get_temp_name(db=db, temp_id=temp_id)
-    elif temp_name:
-        templates = await crud.get_temp_name(db=db, temp_name=temp_name, like=True, page=page, size=size)
-    else:
-        templates = await crud.get_temp_name(db=db, page=page, size=size)
+
+    templates = await crud.get_temp_all_info(db=db, temp_name=temp_name, page=page, size=size)
 
     out_info = []
     for temp in templates:
-        project_code = await conf_crud.get_project_code(db=db, id_=temp.project_name)
-        case_info = await crud.get_temp_case_info(db=db, temp_id=temp.id, outline=outline)
+        # case_info = await crud.get_temp_case_info(db=db, temp_id=temp[0].id, outline=outline)
         temp_info = {
-            'temp_name': temp.temp_name,
-            'project_name': project_code,
-            'id': temp.id,
-            'api_count': temp.api_count,
-            'created_at': temp.created_at,
-            'updated_at': temp.updated_at,
+            'temp_name': temp[0].temp_name,
+            'project_name': temp[1],
+            'id': temp[0].id,
+            'api_count': temp[0].api_count,
+            'created_at': temp[0].created_at,
+            'updated_at': temp[0].updated_at,
         } if outline is False else {
-            'temp_name': temp.temp_name,
-            'id': temp.id,
+            'temp_name': temp[0].temp_name,
+            'id': temp[0].id,
         }
-        temp_info.update(case_info)
+        # temp_info.update(case_info)
         out_info.append(temp_info)
 
     return {
@@ -473,7 +467,6 @@ async def update_description(ud: schemas.UpdateDescription, db: AsyncSession = D
 
 @template.get(
     '/data/list',
-    response_model=List[schemas.TemplateDataOut],
     response_class=response_code.MyJSONResponse,
     response_model_exclude_unset=True,
     response_model_exclude=['file_data'],
@@ -487,6 +480,8 @@ async def get_template_data(temp_name: str = None, temp_id: int = None, db: Asyn
         temp_info = await crud.get_template_data(db=db, temp_name=temp_name)
     else:
         temp_info = await crud.get_template_data(db=db, temp_id=temp_id)
+
+    case_info = await crud.get_temp_case_info(db=db, temp_id=temp_info[0].temp_id, outline=False)
 
     temp_list = []
     for temp in temp_info:
@@ -512,7 +507,10 @@ async def get_template_data(temp_name: str = None, temp_id: int = None, db: Asyn
                 'updated_at': temp.updated_at,
             }
         )
-    return temp_list
+    return {
+        'temp_list': temp_list,
+        'case_info': case_info,
+    }
 
 
 @template.get(
@@ -850,7 +848,6 @@ async def get_sync_api_data(
     if not detail_data:
         return await response_code.resp_400(message='没有获取到这个详情数据')
 
-    print(detail_data)
     now_temp = {
         'params': detail_data[0].params,
         'data': detail_data[0].data,

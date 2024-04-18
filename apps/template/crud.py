@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 from apps.template import models, schemas
 from apps.case_service import models as case_models
+from apps.whole_conf import models as conf_models
 from apps.api_report import models as report_models
 
 
@@ -119,7 +120,6 @@ async def get_temp_name(
         db: AsyncSession,
         temp_name: str = None,
         temp_id: int = None,
-        like: bool = False,
         page: int = 1,
         size: int = 10
 ):
@@ -128,7 +128,6 @@ async def get_temp_name(
     :param db:
     :param temp_name:
     :param temp_id:
-    :param like:
     :param page:
     :param size:
     :return:
@@ -140,22 +139,12 @@ async def get_temp_name(
         return result.scalars().all()
 
     if temp_name:
-        if like:
-            result = await db.execute(
-                select(models.Template).where(
-                    models.Template.temp_name.like(f"%{temp_name}%")
-                ).order_by(
-                    models.Template.id.desc()
-                ).offset(size * (page - 1)).limit(size)
+        result = await db.execute(
+            select(models.Template).where(models.Template.temp_name == temp_name).order_by(
+                models.Template.id.desc()
             )
-            return result.scalars().all()
-        else:
-            result = await db.execute(
-                select(models.Template).where(models.Template.temp_name == temp_name).order_by(
-                    models.Template.id.desc()
-                )
-            )
-            return result.scalars().all()
+        )
+        return result.scalars().all()
 
     result = await db.execute(
         select(models.Template).order_by(models.Template.id.desc()).offset(size * (page - 1)).limit(size)
@@ -689,5 +678,25 @@ async def get_temp_data_group(db: AsyncSession, temp_ids: List[int]):
         ).order_by(
             models.TemplateData.temp_id
         )
+    )
+    return result.all()
+
+
+async def get_temp_all_info(
+        db: AsyncSession,
+        temp_name: str = '',
+        page: int = 1,
+        size: int = 10
+):
+    result = await db.execute(
+        select(
+            models.Template,
+            conf_models.ConfProject.code
+        ).filter(
+            models.Template.temp_name.like(f"%{temp_name}%"),
+            models.Template.project_name == conf_models.ConfProject.id
+        ).order_by(
+            models.Template.id.desc()
+        ).offset(size * (page - 1)).limit(size)
     )
     return result.all()

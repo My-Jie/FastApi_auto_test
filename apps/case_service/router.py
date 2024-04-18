@@ -21,11 +21,9 @@ from tools.check_case_json import CheckJson
 from tools import OperationJson, ExtractParamsPath, RepData, filter_number
 from .tool import GetCaseDataInfo, check, jsonpath_count, aim
 
-from apps.whole_conf import crud as conf_crud
 from apps.template import crud as temp_crud
 from apps.case_service import crud, schemas
 from apps.case_ddt import crud as ddt_crud
-from apps.api_report import crud as report_crud
 from apps.case_service.tool import insert, cover_insert
 from apps.template.tool import GenerateCase
 from apps.run_case import CASE_RESPONSE
@@ -265,7 +263,7 @@ async def download_case_data_info(case_id: int, db: AsyncSession = Depends(get_d
     name='查看测试用例列表'
 )
 async def case_data_list(
-        case_name: str = None,
+        case_name: str = '',
         page: int = 1,
         size: int = 10,
         outline: bool = True,
@@ -274,32 +272,29 @@ async def case_data_list(
     """
     查看测试用例列表
     """
-    test_case = await crud.get_case_info(db=db, case_name=case_name, page=page, size=size)
+    test_case = await crud.get_case_all_info(db=db, case_name=case_name, page=page, size=size)
 
     case_info = []
     for case in test_case:
-        temp_info = await temp_crud.get_temp_name(db=db, temp_id=case.temp_id)
-        project_code = await conf_crud.get_project_code(db=db, id_=temp_info[0].project_name)
-        report = await report_crud.get_api_list(db=db, case_id=case.id)
         case_info.append(
             {
-                "name": f"{project_code}-{temp_info[0].temp_name}-{case.case_name}",
-                "case_name": f"{case.case_name}",
-                "temp_name": f"{project_code}-{temp_info[0].temp_name}",
-                "case_id": case.id,
-                "api_count": case.case_count,
-                "run_order": case.run_order,
-                "success": case.success,
-                "fail": case.fail,
-                "mode": case.mode,
-                "report": report[0].updated_at if report else '1970-01-01 00:00:00',
-                "created_at": case.created_at,
-                "updated_at": case.updated_at
+                "name": f"{case[2]}-{case[1]}-{case[0].case_name}",
+                "case_name": f"{case[0].case_name}",
+                "temp_name": f"{case[2]}-{case[1]}",
+                "case_id": case[0].id,
+                "api_count": case[0].case_count,
+                "run_order": case[0].run_order,
+                "success": case[0].success,
+                "fail": case[0].fail,
+                "mode": case[0].mode,
+                "report": case[3] if case[3] else '1970-01-01 00:00:00',
+                "created_at": case[0].created_at,
+                "updated_at": case[0].updated_at
             } if outline is False else {
-                "name": f"{project_code}-{temp_info[0].temp_name}-{case.case_name}",
-                "case_name": f"{case.case_name}",
-                "temp_name": f"{project_code}-{temp_info[0].temp_name}",
-                "case_id": case.id
+                "name": f"{case[2]}-{case[1]}-{case[0].case_name}",
+                "case_name": f"{case[0].case_name}",
+                "temp_name": f"{case[2]}-{case[1]}",
+                "case_id": case[0].id
             }
         )
     return {
