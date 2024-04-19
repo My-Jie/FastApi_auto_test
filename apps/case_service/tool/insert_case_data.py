@@ -44,6 +44,7 @@ async def insert(db: AsyncSession, case_name: str, temp_id: int, case_data: dict
     :return:
     """
     db_case = await crud.create_test_case(db=db, case_name=case_name, mode=case_data['mode'], temp_id=temp_id)
+
     case_count = 0
     for data in case_data['data']:
         data['number'] = case_count

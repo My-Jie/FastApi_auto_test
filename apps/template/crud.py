@@ -52,7 +52,7 @@ async def update_template(db: AsyncSession, temp_id: int, api_count: int = None)
         return db_temp
 
 
-async def create_template_data(db: AsyncSession, data: schemas.TemplateDataIn, temp_id: int):
+async def create_template_data(db: AsyncSession, data: List[dict], temp_id: int):
     """
     创建模板数据集
     :param db:
@@ -60,11 +60,11 @@ async def create_template_data(db: AsyncSession, data: schemas.TemplateDataIn, t
     :param temp_id:
     :return:
     """
-    db_data = models.TemplateData(**data.dict(), temp_id=temp_id)
-    db.add(db_data)
+    for x in data:
+        d = schemas.TemplateDataIn(**x)
+        db_data = models.TemplateData(**d.dict(), temp_id=temp_id)
+        db.add(db_data)
     await db.commit()
-    await db.refresh(db_data)
-    return db_data
 
 
 async def create_template_data_add(db: AsyncSession, data: schemas.TemplateDataInTwo):
@@ -192,27 +192,14 @@ async def get_temp_case_info(db: AsyncSession, temp_id: int, outline: bool):
     return {'case_count': len(db_case), 'case_info': case_info} if outline is False else {'case_info': case_info}
 
 
-async def get_template_data(db: AsyncSession, temp_name: str = None, temp_id: int = None, numbers: list = None):
+async def get_template_data(db: AsyncSession, temp_id: int = None, numbers: list = None):
     """
     查询模板数据
     :param db:
-    :param temp_name:
     :param temp_id:
     :param numbers:
     :return:
     """
-    if temp_name:
-        result = await db.execute(
-            select(models.Template).where(models.Template.temp_name == temp_name)
-        )
-        db_temp = result.scalars().first()
-        if db_temp:
-            result = await db.execute(
-                select(models.TemplateData).where(models.TemplateData.temp_id == db_temp.id).order_by(
-                    models.TemplateData.number
-                )
-            )
-            return result.scalars().all()
 
     if temp_id and numbers:
         result = await db.execute(

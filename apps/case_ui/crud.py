@@ -37,7 +37,7 @@ async def get_playwright(
         size: int = 10
 ):
     """
-    查询内容
+    查询列表
     :param db:
     :param temp_id:
     :param temp_name:
@@ -76,6 +76,19 @@ async def get_playwright(
         ).offset(size * (page - 1)).limit(size)
     )
     return result.scalars().all()
+
+
+async def get_playwright_data(db: AsyncSession, temp_id: int):
+    """
+    获取文本详情
+    :param db:
+    :param temp_id:
+    :return:
+    """
+    result = await db.execute(
+        select(models.PlaywrightTemp).where(models.PlaywrightTemp.id == temp_id)
+    )
+    return result.scalars().first()
 
 
 async def update_playwright(db: AsyncSession, temp_id: int, project_name: str, temp_name: str, rows: int, text: str):

@@ -37,6 +37,19 @@ class PlaywrightOut(PlaywrightIn):
     updated_at: datetime = None
 
 
+class PlaywrightOutTwo(BaseModel):
+    id: Optional[int]
+    project_name: int
+    temp_name: str
+    project_name: str
+    rows: int
+    run_order: int
+    success: int
+    fail: int
+    created_at: datetime = None
+    updated_at: datetime = None
+
+
 class PlaywrightDataIn(BaseModel):
     temp_id: int
     case_name: str
@@ -56,4 +69,4 @@ class PaginationPlaywright(BaseModel):
     total: int
     page: int
     size: int
-    items: List[PlaywrightOut]
+    items: List[PlaywrightOutTwo]

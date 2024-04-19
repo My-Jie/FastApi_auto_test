@@ -10,6 +10,7 @@ __pycache__/
 sqlite/
 test.py
 /static
+/static_bak
 /dist
 /build
 #/alembic

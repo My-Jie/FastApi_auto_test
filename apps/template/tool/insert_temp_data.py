@@ -37,11 +37,7 @@ class InsertTempData:
         index = num_list[0]
         for x in range(len(har_data)):
             har_data[x]['number'] = index + x
-            await crud.create_template_data(
-                db=db,
-                data=schemas.TemplateDataIn(**har_data[x]),
-                temp_id=temp_id,
-            )
+        await crud.create_template_data(db=db, data=har_data, temp_id=temp_id)
 
         # 再根据id修改旧数据的number
         for x in template_data:
@@ -78,15 +74,9 @@ class InsertTempData:
         :return:
         """
         # 先插入数据
-        new_id = []
         for x in range(len(har_data)):
             har_data[x]['number'] = num_list[x]
-            data_info = await crud.create_template_data(
-                db=db,
-                data=schemas.TemplateDataIn(**har_data[x]),
-                temp_id=temp_id,
-            )
-            new_id.append(data_info.id)
+        await crud.create_template_data(db=db, data=har_data, temp_id=temp_id)
 
         # 再根据id修改旧数据的number
         num = 1

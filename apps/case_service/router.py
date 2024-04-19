@@ -32,38 +32,6 @@ case_service = APIRouter()
 
 
 @case_service.get(
-    '/init/data/list',
-    response_model=schemas.TestCaseDataOut,
-    response_class=response_code.MyJSONResponse,
-    response_model_exclude_unset=True,
-    name='获取预处理后的模板数据'
-)
-async def test_case_data(
-        temp_name: str,
-        mode: schemas.ModeEnum,
-        fail_stop: bool,
-        db: AsyncSession = Depends(get_db)
-):
-    """
-    自动处理部分接口数据上下级关联数据
-    """
-    if mode != schemas.ModeEnum.service:
-        return await response_code.resp_400(message=f'该模式仅支持{schemas.ModeEnum.service}模式')
-
-    template_data = await temp_crud.get_template_data(db=db, temp_name=temp_name)
-    if template_data:
-        return await GenerateCase().read_template_to_api(
-            db=db,
-            temp_name=temp_name,
-            mode=mode,
-            fail_stop=fail_stop,
-            template_data=template_data
-        )
-
-    return await response_code.resp_400()
-
-
-@case_service.get(
     '/download/init/data/json',
     response_model=schemas.TestCaseDataOut,
     response_model_exclude_unset=True,
@@ -161,8 +129,8 @@ async def test_case_upload_json(
 )
 async def temp_to_case(
         temp_id: int,
+        case_name: str,
         case_id: int = None,
-        case_name: str = None,
         cover: bool = False,
         fail_stop: bool = True,
         db: AsyncSession = Depends(get_db)
@@ -171,7 +139,7 @@ async def temp_to_case(
     if not db_temp:
         return await response_code.resp_400(message='模板不存在')
 
-    template_data = await temp_crud.get_template_data(db=db, temp_name=db_temp[0].temp_name)
+    template_data = await temp_crud.get_template_data(db=db, temp_id=temp_id)
     test_data = await GenerateCase().read_template_to_api(
         db=db,
         temp_name=db_temp[0].temp_name,
@@ -201,7 +169,6 @@ async def temp_to_case(
 
 @case_service.get(
     '/data/{case_id}',
-    # response_model=schemas.TestCaseDataOut,
     response_class=response_code.MyJSONResponse,
     response_model_exclude_unset=True,
     name='查看用例测试数据'
@@ -225,7 +192,6 @@ async def case_data_info(case_id: int, db: AsyncSession = Depends(get_db)):
 
 @case_service.get(
     '/download/data/{case_id}',
-    # response_model=schemas.TestCaseDataOut,
     response_class=response_code.MyJSONResponse,
     response_model_exclude_unset=True,
     name='下载测试数据-Json'

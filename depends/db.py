@@ -12,10 +12,5 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 async def get_db():
-    try:
-        async with async_session_local() as db:
-            yield db
-    except SQLAlchemyError:
-        await db.rollback()
-    finally:
-        await db.close()
+    async with async_session_local() as db:
+        yield db

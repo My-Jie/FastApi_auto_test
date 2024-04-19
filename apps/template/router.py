@@ -78,8 +78,7 @@ async def upload_file_har(
     # 创建主表数据
     db_template = await crud.create_template(db=db, temp_name=temp_name, project_name=project_name)
     # 批量写入数据
-    for temp in temp_info:
-        await crud.create_template_data(db=db, data=schemas.TemplateDataIn(**temp), temp_id=db_template.id)
+    await crud.create_template_data(db=db, data=temp_info, temp_id=db_template.id)
     return await crud.update_template(db=db, temp_id=db_template.id, api_count=len(temp_info))
 
 
@@ -89,7 +88,7 @@ async def upload_file_har(
     response_class=response_code.MyJSONResponse,
     response_model_exclude_unset=True,
     name='上传Charles的har文件-仅解析-不写入',
-    response_model_exclude=['headers', 'file_data']
+    response_model_exclude={'headers', 'file_data'}
 )
 async def analysis_file_har(file: UploadFile):
     """
@@ -147,8 +146,7 @@ async def upload_swagger_json(
             return await response_code.resp_400(message=f'创建数据失败: temp_name 重复')
         else:
             # 批量写入数据
-            for temp in temp_info:
-                await crud.create_template_data(db=db, data=schemas.TemplateDataIn(**temp), temp_id=db_template.id)
+            await crud.create_template_data(db=db, data=temp_info, temp_id=db_template.id)
             return await crud.update_template(db=db, temp_id=db_template.id, api_count=len(temp_info))
 
 
@@ -172,10 +170,10 @@ async def upload_curl(
 @template.put(
     '/insert/har',
     response_model=case_schemas.TestCaseDataOut,
-    # response_class=response_code.MyJSONResponse,
+    response_class=response_code.MyJSONResponse,
     response_model_exclude_unset=True,
     name='插入charles原始数据到模板中，并提供插入数据的预处理数据下载',
-    # response_model_exclude=['headers', 'file_data']
+    response_model_exclude={'file_data'}
 )
 async def insert_har(
         temp_id: int = Query(description='模板id'),
@@ -468,18 +466,13 @@ async def update_description(ud: schemas.UpdateDescription, db: AsyncSession = D
 @template.get(
     '/data/list',
     response_class=response_code.MyJSONResponse,
-    response_model_exclude_unset=True,
-    response_model_exclude=['file_data'],
     name='查询模板接口原始数据'
 )
-async def get_template_data(temp_name: str = None, temp_id: int = None, db: AsyncSession = Depends(get_db)):
+async def get_template_data(temp_id: int = None, db: AsyncSession = Depends(get_db)):
     """
-    按模板名称查询接口原始数据，不返回['headers', 'file_data']
+    按模板名称查询接口原始数据，不返回['file_data']
     """
-    if temp_name:
-        temp_info = await crud.get_template_data(db=db, temp_name=temp_name)
-    else:
-        temp_info = await crud.get_template_data(db=db, temp_id=temp_id)
+    temp_info = await crud.get_template_data(db=db, temp_id=temp_id)
 
     case_info = await crud.get_temp_case_info(db=db, temp_id=temp_info[0].temp_id, outline=False)
 
@@ -581,8 +574,7 @@ async def create_new_temp(
     # 创建主表数据
     db_template = await crud.create_template(db=db, temp_name=temp_name, project_name=project_name)
     # 批量写入数据
-    for temp in new_temp_info:
-        await crud.create_template_data(db=db, data=schemas.TemplateDataIn(**temp), temp_id=db_template.id)
+    await crud.create_template_data(db=db, data=new_temp_info, temp_id=db_template.id)
     await crud.update_template(db=db, temp_id=db_template.id, api_count=len(new_temp_info))
     return await response_code.resp_200()
 

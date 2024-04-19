@@ -60,25 +60,10 @@ async def put_playwright(pd: schemas.PlaywrightIn, db: AsyncSession = Depends(ge
 
 
 @case_ui.get(
-    '/get/playwright/data',
-    name='获取UI数据详情',
-    response_model=schemas.PlaywrightOut,
-    response_class=response_code.MyJSONResponse,
-)
-async def get_playwright_data(temp_id: int, db: AsyncSession = Depends(get_db)):
-    """
-    获取playwright详情
-    """
-    temp_info = await crud.get_playwright(db=db, temp_id=temp_id)
-    return temp_info[0]
-
-
-@case_ui.get(
     '/get/playwright/list',
     name='获取UI数据列表',
     response_model=schemas.PaginationPlaywright,
     response_class=response_code.MyJSONResponse,
-    response_model_exclude=['text']
 )
 async def get_playwright_list(
         temp_name: str = None,
@@ -101,7 +86,6 @@ async def get_playwright_list(
                 'run_order': temp.run_order,
                 'success': temp.success,
                 'fail': temp.fail,
-                'text': temp.text,
                 'created_at': temp.created_at,
                 'updated_at': temp.updated_at,
             }
@@ -116,27 +100,21 @@ async def get_playwright_list(
 
 
 @case_ui.get(
-    '/get/playwright/case/{temp_id}',
-    name='获取文本中对应的数据',
+    '/get/playwright/data',
+    name='获取UI数据详情',
+    response_model=schemas.PlaywrightOut,
+    response_class=response_code.MyJSONResponse,
 )
-async def get_playwright_case(temp_id: int, db: AsyncSession = Depends(get_db)):
+async def get_playwright_data(temp_id: int, db: AsyncSession = Depends(get_db)):
     """
-    获取测试数据
+    获取playwright详情
     """
-    temp_info = await crud.get_playwright(db=db, temp_id=temp_id)
-    if temp_info:
-        data = await case_data.get_row_data(playwright_text=temp_info[0].text)
-        if data:
-            return await response_code.resp_200(data=data)
-        else:
-            return data
-    else:
-        return temp_info
+    return await crud.get_playwright_data(db=db, temp_id=temp_id)
 
 
 @case_ui.get(
     '/down/playwright/data/{temp_id}',
-    name='下载文本中的数据'
+    name='下载数据集'
 )
 async def down_playwright_data(temp_id: int, db: AsyncSession = Depends(get_db)):
     """

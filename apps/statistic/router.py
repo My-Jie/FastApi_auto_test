@@ -64,7 +64,6 @@ async def get_e_charts_free(
     '/get/playwright/echarts',
     name='获取UI数据统计',
     response_class=response_code.MyJSONResponse,
-    response_model_exclude=['text']
 )
 async def get_playwright_list(
         temp_name: str = None,

@@ -65,9 +65,9 @@ async def create_test_case_data(db: AsyncSession, data: schemas.TestCaseDataIn, 
     """
     db_data = models.TestCaseData(**data.dict(), case_id=case_id)
     db.add(db_data)
-    await db.commit()
-    await db.refresh(db_data)
-    return db_data
+    # await db.commit()
+    # await db.refresh(db_data)
+    # return db_data
 
 
 async def create_test_case_data_add(db: AsyncSession, data: schemas.TestCaseDataInTwo):
