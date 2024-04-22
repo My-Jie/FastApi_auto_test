@@ -125,7 +125,7 @@ async def delete_api_detail(db: AsyncSession, report_id: int):
     :return:
     """
     await db.execute(
-        delete(models.ApiReportList).filter(models.ApiReportDetail.report_id == report_id)
+        delete(models.ApiReportDetail).filter(models.ApiReportDetail.report_id == report_id)
     )
 
 
