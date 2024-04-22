@@ -88,7 +88,7 @@ class GenerateCase:
         :return:
         """
 
-        def header_key(data: [dict, list, str]) -> [dict, list, str]:
+        def header_key(data: Any) -> [dict, list, str]:
 
             if isinstance(data, list):
                 return [header_key(x) for x in data]
@@ -98,12 +98,13 @@ class GenerateCase:
 
             target = {}
             for key in data.keys():
-                for x, res in enumerate(response):
+                print(len(response))
+                for i, res in enumerate(response):
                     value = jsonpath.jsonpath(res, f"$..{key}")
                     if isinstance(value, list):
                         ipath = jsonpath.jsonpath(res, f"$..{key}", result_type='IPATH')[0]
                         if key.lower() == ipath[-1].lower() and data[key] == value[0] and value[0]:
-                            target[key] = "{{" + f"{x}.$.{'.'.join(ipath)}" + "}}"
+                            target[key] = "{{" + f"{i}.$.{'.'.join(ipath)}" + "}}"
                             break
                         else:
                             target[key] = data[key]

@@ -57,7 +57,7 @@ async def del_report(
 
     # 删除报告列表
     for i in report_id:
-        await crud.delete_api_report(db=db, report_id=i.id)
         await crud.delete_api_detail(db=db, report_id=i.id)
+        await crud.delete_api_report(db=db, report_id=i.id)
     else:
         await db.commit()

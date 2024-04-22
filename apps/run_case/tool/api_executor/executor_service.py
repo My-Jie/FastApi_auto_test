@@ -11,6 +11,7 @@
 import copy
 import time
 import json
+import random
 import base64
 import asyncio
 import aiohttp
@@ -26,9 +27,9 @@ from apps.case_service.tool import jsonpath_count
 from apps.run_case import CASE_STATUS, CASE_RESPONSE, CASE_STATUS_LIST
 from tools import logger, get_cookie, AsyncMySql
 from tools.read_setting import setting
-from tools.database import async_session_local
 
 from .base_abstract import ApiBase
+from ..del_status import del_status
 from ..handle_headers import replace_headers
 from ..run_api_data_processing import DataProcessing
 from ..check_data import check_customize
@@ -153,14 +154,15 @@ class ExecutorService(ApiBase):
         if sync:
             for api_list in self.api_group:
                 try:
-                    await self._run_api(api_list=api_list)
+                    await self._run_api(api_list=api_list, key_id=f'{time.time()}_{random.uniform(0, 1)}')
                 except client_exceptions.ClientConnectorError as e:
                     logger.error(e)
         else:
             tasks = [
                 asyncio.create_task(
                     self._run_api(
-                        api_list=api_list
+                        api_list=api_list,
+                        key_id=f'{time.time()}_{random.uniform(0, 1)}'
                     )
                 ) for api_list in self.api_group
             ]
@@ -270,10 +272,11 @@ class ExecutorService(ApiBase):
             self.report_list.append(report)
             CASE_RESPONSE[report['case_id']] = copy.deepcopy(api_list)
 
-    async def _run_api(self, api_list: list):
+    async def _run_api(self, api_list: list, key_id: str):
         """
         执行用例
         :param api_list:
+        :param key_id:
         :return:
         """
         sees = aiohttp.client.ClientSession(timeout=aiohttp.ClientTimeout(total=120))
@@ -281,7 +284,7 @@ class ExecutorService(ApiBase):
         logger.info(
             f"{'=' * 30}{api_list[0]['api_info']['temp_name']}-{api_list[0]['api_info']['case_name']}{'=' * 30}"
         )
-        for api in api_list:
+        for i, api in enumerate(api_list):
             # 处理请求相关的jsonpath数据
             (
                 api['request_info']['url'],
@@ -343,19 +346,23 @@ class ExecutorService(ApiBase):
                 else:
                     response_info['response']['status_code'] = res.status
 
+                # 处理响应
                 result = await self._assert(check=api['check'], response=response_info['response'])
                 api['assert_info'].append(result)
                 try:
                     del response_info['response']['status_code']
                 except TypeError:
                     response_info['response'] = response_info['response'][-1]
-                if not [x for x in result if x['result'] == 1]:  # 判断断言结果，没有失败则退出循环，不继续轮询
-                    break
 
-                # 轮询控制
-                if sleep <= 5:
+                # 判断退出while条件
+                if any([
+                    sleep <= 5,
+                    CASE_STATUS.get(key_id, {}).get('stop'),
+                    not [x for x in api['assert_info'][-1] if x['result'] == 1]  # 判断断言结果，没有失败则退出循环，不继续轮询
+                ]):
                     break
                 else:
+                    await self._case_status(api=api, key_id=key_id, total=len(api_list))
                     sleep -= 5
                     await asyncio.sleep(5)
             # ⬜️================== 🍉轮询结束请求，单接口的默认间隔时间超过5s，每次请求间隔5s进行轮询🍉 ==================⬜️ #
@@ -376,7 +383,9 @@ class ExecutorService(ApiBase):
             if any([
                 # 主动停止
                 api['config'].get('stop'),
-                # 执行失败
+                # 手动停止
+                CASE_STATUS.get(key_id, {}).get('stop'),
+                # 执行失败停止
                 all([
                     setting['global_fail_stop'],  # 配置中的失败停止总开关：开
                     api['config'].get('fail_stop'),  # 单接口配置失败停止：开
@@ -384,13 +393,20 @@ class ExecutorService(ApiBase):
                 ]),
             ]):
                 api['api_info']['run_status'] = False  # 标记停止运行的接口
+                await self._case_status(api=api, key_id=key_id, total=len(api_list))
                 await sees.close()
                 break
 
             if api['config'].get('sleep') <= 5:
                 await asyncio.sleep(api['config']['sleep'])  # 业务场景用例执行下，默认的间隔时间
+
+            if i != len(api_list) - 1:
+                await self._case_status(api=api, key_id=key_id, total=len(api_list))
         else:
             api_list[-1]['api_info']['run_status'] = False  # 标记停止运行的接口
+            await self._case_status(api=api_list[-1], key_id=key_id, total=len(api_list))
+
+        asyncio.create_task(del_status(key_id=key_id))
         await sees.close()
 
     async def _assert(self, check: dict, response: dict):
@@ -442,3 +458,42 @@ class ExecutorService(ApiBase):
         async with AsyncMySql(db_config) as s:
             sql_data = await s.select(sql=sql)
             return [x[0] for x in sql_data] if sql_data else False
+
+    @staticmethod
+    async def _case_status(api: dict, key_id: str, total: int):
+        """
+        记录用例运行状态
+        :param api:
+        :param key_id:
+        :param total:
+        :return:
+        """
+
+        # 进度条
+        success = CASE_STATUS.get(key_id, {}).get('success', 0)
+        fail = CASE_STATUS.get(key_id, {}).get('fail', 0)
+        CASE_STATUS[key_id] = {
+            'key_id': key_id,
+            'case_id': api['api_info']['case_id'],
+            'success': success + 1 if api['report']['result'] == 0 else success,
+            'fail': fail + 1 if [x for x in api['assert_info'][-1] if x['result'] == 1] else fail,
+            'total': total,
+            'stop': False,
+        }
+
+        # 执行过程详情
+        info = {
+            'number': api['api_info']['number'],
+            'url': api['request_info']['url'],
+            'method': api['request_info']['method'],
+            'status_code': api['response_info'][-1]['status_code'],
+            'run_time': api['response_info'][-1]['response_time'],
+            'is_fail': True if [x for x in api['assert_info'][-1] if x['result'] == 1] else False,
+            'is_login': api['config'].get('is_login'),
+            'description': api['api_info']['description'],
+            'run_status': api['api_info']['run_status']
+        }
+        if CASE_STATUS_LIST.get(key_id):
+            CASE_STATUS_LIST[key_id].append(info)
+        else:
+            CASE_STATUS_LIST[key_id] = [info]

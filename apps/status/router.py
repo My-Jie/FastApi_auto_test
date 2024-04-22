@@ -7,8 +7,6 @@
 @Time: 2023/9/19-15:14
 """
 
-import copy
-import time
 from apps.status.tool import ConnectionManager
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from apps.run_case import CASE_STATUS_LIST, CASE_STATUS
@@ -27,15 +25,10 @@ async def status(websocket: WebSocket, user: str):
 
     try:
         while True:
-            now_time = int(time.time() * 1000)
             key_id = await websocket.receive_text()
-            msg = copy.deepcopy(CASE_STATUS_LIST.get(key_id, []))
-            old_msg = []
-            for x in msg:
-                if x['time'] <= now_time:
-                    old_msg.append(x)
-                    CASE_STATUS_LIST[key_id].remove(x)
-            await manager.send_personal_message(old_msg, websocket)
+            msg = CASE_STATUS_LIST.get(key_id, [])
+            await manager.send_personal_message(msg, websocket)
+            CASE_STATUS_LIST[key_id] = []
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
@@ -50,7 +43,8 @@ async def percentage(websocket: WebSocket, user: str):
     try:
         while True:
             await websocket.receive_text()
-            await manager.send_personal_message(CASE_STATUS, websocket)
+            new_status = sorted(CASE_STATUS.items(), key=lambda x: x[0], reverse=True)
+            await manager.send_personal_message(dict(new_status), websocket)
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)

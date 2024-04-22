@@ -817,7 +817,6 @@ async def detail_api(detail_id: int, db: AsyncSession = Depends(get_db)):
     查询用例api详情
     """
     case_detail = await crud.get_case_detail(db=db, detail_id=detail_id)
-    print(case_detail)
     if not case_detail:
         return await response_code.resp_400(message='没有获取到这个用例api详情数据')
     return case_detail
