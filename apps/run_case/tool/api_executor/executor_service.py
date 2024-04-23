@@ -472,13 +472,15 @@ class ExecutorService(ApiBase):
         # 进度条
         success = CASE_STATUS.get(key_id, {}).get('success', 0)
         fail = CASE_STATUS.get(key_id, {}).get('fail', 0)
+        stop = CASE_STATUS.get(key_id, {}).get('stop', False)
         CASE_STATUS[key_id] = {
             'key_id': key_id,
             'case_id': api['api_info']['case_id'],
             'success': success + 1 if api['report']['result'] == 0 else success,
             'fail': fail + 1 if [x for x in api['assert_info'][-1] if x['result'] == 1] else fail,
             'total': total,
-            'stop': False,
+            'stop': stop,
+            'case_name': f"{api['api_info']['case_name']}"
         }
 
         # 执行过程详情
@@ -491,7 +493,8 @@ class ExecutorService(ApiBase):
             'is_fail': True if [x for x in api['assert_info'][-1] if x['result'] == 1] else False,
             'is_login': api['config'].get('is_login'),
             'description': api['api_info']['description'],
-            'run_status': api['api_info']['run_status']
+            'run_status': api['api_info']['run_status'],
+            'total': total,
         }
         if CASE_STATUS_LIST.get(key_id):
             CASE_STATUS_LIST[key_id].append(info)
