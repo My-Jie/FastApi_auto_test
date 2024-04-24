@@ -362,7 +362,8 @@ class ExecutorService(ApiBase):
                 ]):
                     break
                 else:
-                    await self._case_status(api=api, key_id=key_id, total=len(api_list))
+                    if i <= len(api_list) - 2:
+                        await self._case_status(api=api, key_id=key_id, total=len(api_list), retry=True)
                     sleep -= 5
                     await asyncio.sleep(5)
             # ⬜️================== 🍉轮询结束请求，单接口的默认间隔时间超过5s，每次请求间隔5s进行轮询🍉 ==================⬜️ #
@@ -393,14 +394,15 @@ class ExecutorService(ApiBase):
                 ]),
             ]):
                 api['api_info']['run_status'] = False  # 标记停止运行的接口
-                await self._case_status(api=api, key_id=key_id, total=len(api_list))
+                if i <= len(api_list) - 2:
+                    await self._case_status(api=api, key_id=key_id, total=len(api_list))
                 await sees.close()
                 break
 
             if api['config'].get('sleep') <= 5:
                 await asyncio.sleep(api['config']['sleep'])  # 业务场景用例执行下，默认的间隔时间
 
-            if i != len(api_list) - 1:
+            if i <= len(api_list) - 2:
                 await self._case_status(api=api, key_id=key_id, total=len(api_list))
         else:
             api_list[-1]['api_info']['run_status'] = False  # 标记停止运行的接口
@@ -460,27 +462,42 @@ class ExecutorService(ApiBase):
             return [x[0] for x in sql_data] if sql_data else False
 
     @staticmethod
-    async def _case_status(api: dict, key_id: str, total: int):
+    async def _case_status(api: dict, key_id: str, total: int, retry: bool = False):
         """
         记录用例运行状态
         :param api:
         :param key_id:
         :param total:
+        :param retry:
         :return:
         """
 
         # 进度条
+        stop = CASE_STATUS.get(key_id, {}).get('stop', False)
+        number = CASE_STATUS.get(key_id, {}).get('number', 99999)
+
+        # 计算成功失败
         success = CASE_STATUS.get(key_id, {}).get('success', 0)
         fail = CASE_STATUS.get(key_id, {}).get('fail', 0)
-        stop = CASE_STATUS.get(key_id, {}).get('stop', False)
+
         CASE_STATUS[key_id] = {
             'key_id': key_id,
             'case_id': api['api_info']['case_id'],
-            'success': success + 1 if api['report']['result'] == 0 else success,
-            'fail': fail + 1 if [x for x in api['assert_info'][-1] if x['result'] == 1] else fail,
+            'number': api['api_info']['number'],
+            'success': success + 1 if all([
+                [x for x in api['assert_info'][-1] if x['result'] == 0],
+                retry is False,
+                number != api['api_info']['number']
+            ]) else success,
+            'fail': fail + 1 if all([
+                [x for x in api['assert_info'][-1] if x['result'] == 1],
+                retry is False,
+            ]) else fail,
+            'retry': retry,
             'total': total,
             'stop': stop,
-            'case_name': f"{api['api_info']['case_name']}"
+            'run_status': api['api_info']['run_status'],
+            'case_name': api['api_info']['case_name']
         }
 
         # 执行过程详情
