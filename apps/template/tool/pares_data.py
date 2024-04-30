@@ -45,7 +45,7 @@ class ParseData:
                 if data['response']['content'].get('mimeType') in FILTER_MIME_TYPE:
                     continue
             else:
-                if data['_resourceType'] not in ['xhr', 'document']:
+                if data.get('_resourceType', '') not in ['xhr', 'document']:
                     continue
 
             logger.debug(f"{'=' * 30}开始解析{api_count}{'=' * 30}")

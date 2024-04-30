@@ -72,8 +72,8 @@ async def upload_file_har(
             har_data=file.file.read(),
             har_type=har_type
         )
-    except binascii.Error as e:
-        return await response_code.resp_400(message=f'解析数据失败，请检查数据类型')
+    except (binascii.Error, UnicodeDecodeError) as e:
+        return await response_code.resp_400(message=f'解析数据失败:{str(e)}，请检查数据类型')
 
     # 创建主表数据
     db_template = await crud.create_template(db=db, temp_name=temp_name, project_name=project_name)
