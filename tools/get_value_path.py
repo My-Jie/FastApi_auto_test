@@ -96,7 +96,8 @@ class ExtractParamsPath:
                 value_path_list = _get_data(
                     data.headers,
                     data.number,
-                    data.path
+                    data.path,
+                    schemas.RepType.headers
                 )
             elif type_ == schemas.RepType.response_headers:
                 value_path_list = _get_data(

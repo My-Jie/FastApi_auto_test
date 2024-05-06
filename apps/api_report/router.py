@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends
 from depends import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api_report import schemas, crud
+from apps import response_code
 
 api_report = APIRouter()
 
@@ -58,6 +59,9 @@ async def del_report(
     # 删除报告列表
     for i in report_id:
         await crud.delete_api_detail(db=db, report_id=i.id)
-        await crud.delete_api_report(db=db, report_id=i.id)
     else:
         await db.commit()
+
+    await crud.delete_api_report(db=db, case_id=case_id)
+
+    await response_code.resp_200(message='删除成功')

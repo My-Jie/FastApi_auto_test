@@ -652,7 +652,7 @@ async def get_case_data_json_path(
                     headers_list['extract_contents'],
             )
     ):
-        return await response_code.resp_400()
+        return await response_code.resp_400(message='没有获取到数据')
 
     return await response_code.resp_200(
         data={

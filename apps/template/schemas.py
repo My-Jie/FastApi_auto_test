@@ -70,10 +70,10 @@ class TemplateDataIn(BaseModel):
     method: str
     params: Optional[dict] = {}
     json_body: str
-    data: Union[dict, list] = {}
+    data: Union[list, dict] = {}
     file: bool
     file_data: Optional[list] = []
-    response: Union[dict, list, str] = {}
+    response: Union[str, list, dict] = {}
     headers: Optional[dict] = {}
     response_headers: Optional[dict] = {}
     description: Union[str, None] = ''
@@ -137,13 +137,13 @@ class SaveApiData(BaseModel):
     temp_id: int
     number: int
     type: str
-    data_info: Union[dict, list]
+    data_info: Union[list, dict]
 
 
 class SaveApiPath(BaseModel):
     temp_id: int
     number: int
-    path_info: Union[dict, list]
+    path_info: Union[list, dict]
 
 
 class SetSyncData(BaseModel):

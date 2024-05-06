@@ -104,15 +104,15 @@ async def get_api_detail(db: AsyncSession, report_id: int, page: int = 1, size: 
     return result.scalars().all()
 
 
-async def delete_api_report(db: AsyncSession, report_id: int):
+async def delete_api_report(db: AsyncSession, case_id: int):
     """
     删除测试用例报告
     :param db:
-    :param report_id:
+    :param case_id:
     :return:
     """
     await db.execute(
-        delete(models.ApiReportList).filter(models.ApiReportList.id == report_id)
+        delete(models.ApiReportList).filter(models.ApiReportList.case_id == case_id)
     )
     await db.commit()
 

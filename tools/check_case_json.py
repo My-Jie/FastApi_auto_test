@@ -19,7 +19,7 @@ class CheckJson:
     """
 
     @classmethod
-    async def check_to_service(cls, db: AsyncSession, temp_id: int, case_data: List[schemas.TestCaseData]):
+    async def check_to_service(cls, db: AsyncSession, temp_id: int, case_data: List[schemas.TestCaseDataIn]):
         """
         校验数据
         :param db:

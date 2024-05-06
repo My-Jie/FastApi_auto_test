@@ -73,7 +73,7 @@ class SedParamsData(BaseModel):
     case_id: int
     number: int
     type: str
-    data_info: Union[dict, list]
+    data_info: Union[list, dict]
 
 
 # 用例名称的请求/响应数据模型
@@ -111,11 +111,11 @@ class TestCaseConfig(BaseModel):
 
 
 class TestCaseDataIn(BaseModel):
-    number: Union[str, int]
+    number: Union[int]
     path: str
     headers: Optional[dict] = {}
     params: Optional[dict] = {}
-    data: Union[dict, list] = {}
+    data: Union[list, dict] = {}
     file: bool
     check: Optional[dict] = {}
     description: Union[str, None] = None
@@ -129,19 +129,19 @@ class TestCaseDataInTwo(TestCaseDataIn):
     case_id: int
 
 
-class TestCaseData(BaseModel):
-    number: Union[int, str]
-    path: str
-    headers: Optional[dict] = {}
-    params: Optional[dict] = {}
-    data: Union[dict, list] = {}
-    file: bool
-    check: Optional[dict] = {}
-    description: Union[str, None] = None
-    config: TestCaseConfig
-
-    class Config:
-        orm_mode = True
+# class TestCaseData(BaseModel):
+#     number: Union[int, str]
+#     path: str
+#     headers: Optional[dict] = {}
+#     params: Optional[dict] = {}
+#     data: Union[list, dict] = {}
+#     file: bool
+#     check: Optional[dict] = {}
+#     description: Union[str, None] = None
+#     config: TestCaseConfig
+#
+#     class Config:
+#         orm_mode = True
 
 
 class TestCaseDataOut(BaseModel):
@@ -149,7 +149,7 @@ class TestCaseDataOut(BaseModel):
     temp_name: str = None
     case_name: str = None
     mode: ModeEnum
-    data: List[TestCaseData]
+    data: List[TestCaseDataIn]
 
     class Config:
         orm_mode = True
@@ -161,7 +161,7 @@ class TestCaseDataOut1(BaseModel):
     path: str
     headers: Optional[dict] = {}
     params: Optional[dict] = {}
-    data: Union[dict, list] = {}
+    data: Union[list, dict] = {}
     file: bool
     check: Optional[dict] = {}
     description: Union[str, None] = None

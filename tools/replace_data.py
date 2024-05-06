@@ -254,7 +254,7 @@ async def _header_str_param(x: str, api_list: list, is_header: bool):
                 extract_key,
                 api_list[
                     int(num)
-                ]['response_info']['headers'] if is_header else api_list[int(num)]['response_info'][-1]['response'],
+                ]['response_info'][-1]['headers'] if is_header else api_list[int(num)]['response_info'][-1]['response'],
             )
             if value_set:
                 if not value:
@@ -269,7 +269,7 @@ async def _header_str_param(x: str, api_list: list, is_header: bool):
     value = jsonpath.jsonpath(
         api_list[
             int(num)
-        ]['response_info']['headers'] if is_header else api_list[int(num)]['response_info'][-1]['response'],
+        ]['response_info'][-1]['headers'] if is_header else api_list[int(num)]['response_info'][-1]['response'],
         json_path
     )
     if value:

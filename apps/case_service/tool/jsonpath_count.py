@@ -33,7 +33,10 @@ def json_count(dict_data: [dict, list, str], data_type: str, number: int):
 
         if isinstance(data_json, str):
             held_str(data_json, target)
-        else:
+        if isinstance(data_json, list):
+            for data in data_json:
+                handle_value(data)
+        if isinstance(data_json, dict):
             for k, v in data_json.items():
                 if isinstance(v, str):
                     held_str(v, target)
