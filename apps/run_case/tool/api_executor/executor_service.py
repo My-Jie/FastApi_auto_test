@@ -297,7 +297,19 @@ class ExecutorService(ApiBase):
                 params=api['request_info']['params'],
                 data=api['request_info'].get('data') or api['request_info'].get('json'),
                 headers=replace_headers(  # 将用例中的headers临时替换到模板中
-                    cookie=self._cookie.get(api['api_info']['host'], ''),
+                    cookie=self._cookie.get(
+                        api['api_info']['host'],
+                        api['history']['headers'].get(
+                            'Cookie',
+                            api['history']['headers'].get(
+                                'cookie',
+                                api['request_info']['headers'].get(
+                                    'Cookie',
+                                    api['request_info']['headers'].get('cookie', '')
+                                )
+                            )
+                        )
+                    ),
                     tmp_header=api['request_info']['headers'],
                     case_header=api['history']['headers'],
                     tmp_file=api['api_info']['file']
