@@ -800,7 +800,13 @@ async def sync_api_data(sad: schemas.SaveApiData, db: AsyncSession = Depends(get
     if sad.type.lower() == 'params':
         await crud.save_temp_info(db=db, temp_id=sad.temp_id, number=sad.number, params=sad.data_info)
     elif sad.type.lower() == 'data':
-        await crud.save_temp_info(db=db, temp_id=sad.temp_id, number=sad.number, data=sad.data_info)
+        await crud.save_temp_info(
+            db=db,
+            temp_id=sad.temp_id,
+            number=sad.number,
+            data=sad.data_info,
+            json_body=sad.json_body
+        )
     elif sad.type.lower() == 'headers':
         await crud.save_temp_info(db=db, temp_id=sad.temp_id, number=sad.number, headers=sad.data_info)
     else:

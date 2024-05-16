@@ -137,6 +137,7 @@ class SaveApiData(BaseModel):
     temp_id: int
     number: int
     type: str
+    json_body: str
     data_info: Union[list, dict]
 
 

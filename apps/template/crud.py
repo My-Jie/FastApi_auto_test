@@ -520,6 +520,7 @@ async def save_temp_info(
         params: dict = None,
         data: dict = None,
         headers: dict = None,
+        json_body: str = None
 ):
     """
     更新用例的数据
@@ -552,6 +553,9 @@ async def save_temp_info(
         elif headers is not None:
             db_temp.headers = headers
             flag_modified(db_temp, "headers")
+
+        if json_body:
+            db_temp.json_body = json_body
 
         await db.commit()
         await db.refresh(db_temp)
