@@ -34,23 +34,31 @@ async def send_api(db: AsyncSession, api_info: schemas.TemplateDataInTwo, get_co
 
     # 处理下response数据格式
     temp_info = RESPONSE_INFO.get(api_info.temp_id, {})
-    response = []
-    response_headers = []
+    api_list = []
     for i in range(api_info.number):
         if temp_info.get(i):
-            response.append(temp_info.get(i, {}).get('response', {}))
-            response_headers.append(temp_info.get(i, {}).get('response_headers', {}))
+            api_list.append(
+                {'response_info': {
+                    'headers': temp_info.get(i, {}).get('response_headers', {}),
+                    'response': temp_info.get(i, {}).get('response', {})
+                }}
+            )
         else:
-            response.append({})
-            response_headers.append({})
+            api_list.append(
+                {
+                    'response_info': {
+                        'headers': {},
+                        'response': {},
+                    }
+                }
+            )
 
     fk = FakerData()
     # 识别url表达式
     url = await replace_data.replace_url(
         db=db,
         old_str=f"{api_info.host}{api_info.path}",
-        response=response,
-        response_headers=response_headers,
+        api_list=[],
         faker=fk,
         code='',
         extract='',
@@ -60,8 +68,7 @@ async def send_api(db: AsyncSession, api_info: schemas.TemplateDataInTwo, get_co
     params = await replace_data.replace_params_data(
         db=db,
         data=api_info.params,
-        response=response,
-        response_headers=response_headers,
+        api_list=[],
         faker=fk,
         code='',
         extract='',
@@ -71,8 +78,7 @@ async def send_api(db: AsyncSession, api_info: schemas.TemplateDataInTwo, get_co
     data = await replace_data.replace_params_data(
         db=db,
         data=api_info.data,
-        response=response,
-        response_headers=response_headers,
+        api_list=[],
         faker=fk,
         code='',
         extract='',
@@ -82,8 +88,7 @@ async def send_api(db: AsyncSession, api_info: schemas.TemplateDataInTwo, get_co
     case_header = await replace_data.replace_params_data(
         db=db,
         data=api_info.headers,
-        response_headers=response_headers,
-        response=response,
+        api_list=[],
         faker=fk,
         customize={}
     )
