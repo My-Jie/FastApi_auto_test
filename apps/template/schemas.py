@@ -151,3 +151,4 @@ class SetSyncData(BaseModel):
     detail_id: int
     sync_data: dict
     data_type: str
+    api_type: str

@@ -633,3 +633,57 @@ async def get_case_all_info(
         ).offset(size * (page - 1)).limit(size)
     )
     return result.all()
+
+
+async def sync_case(
+        db: AsyncSession,
+        number: int,
+        method: str,
+        path: str,
+        data_type: str,
+        temp_id: int = None,
+        case_all: bool = False
+):
+    # TODO 未按method去过滤，后期优化
+    if not case_all:
+        result = await db.execute(
+            select(models.TestCaseData, models.TestCase).where(
+                models.TestCase.temp_id == temp_id,
+                models.TestCaseData.path == path,
+            ).filter(
+                models.TestCaseData.case_id == models.TestCase.id,
+            )
+        )
+        db_temp = result.all()
+    else:
+        result = await db.execute(
+            select(models.TestCaseData, models.TestCase).where(
+                models.TestCaseData.path == path,
+            ).filter(
+                models.TestCaseData.case_id == models.TestCase.id,
+            )
+        )
+        db_temp = result.all()
+
+    case_list = []
+    for x in db_temp:
+        case_list.append(
+            {
+                'id': x[0].id,
+                'temp_id': x[1].temp_id,
+                'number': x[0].number,
+                'method': method,
+                'path': x[0].path,
+                'data': {
+                    'params': x[0].params,
+                    'data': x[0].data,
+                    'headers': x[0].headers
+                }.get(data_type),
+                'description': x[0].description,
+                'active_name': '4',
+                'type': data_type,
+                'temp_name': x[1].case_name,
+                'source': 'API用例'
+            }
+        )
+    return case_list

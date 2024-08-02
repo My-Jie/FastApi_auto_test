@@ -854,8 +854,9 @@ async def get_sync_api_data(
     if now_temp is None:
         await response_code.resp_400(message='数据类型错误')
 
+    new_data = []
     if sync_type == 'temp':
-        temp_data = await crud.sync_temp(
+        new_data = await crud.sync_temp(
             db=db,
             number=detail_data[0].number,
             method=detail_data[0].method,
@@ -865,7 +866,18 @@ async def get_sync_api_data(
             temp_all=temp_all
         )
 
-    for x in temp_data:
+    if sync_type == 'case':
+        new_data = await case_crud.sync_case(
+            db=db,
+            number=detail_data[0].number,
+            method=detail_data[0].method,
+            path=detail_data[0].path,
+            data_type=data_type,
+            temp_id=detail_data[0].temp_id,
+            case_all=case_all
+        )
+
+    for x in new_data:
         diff = await compare_data(now_temp, x['data'])
         if diff['value_changed']:
             x['active_name'] = '3'
@@ -875,7 +887,7 @@ async def get_sync_api_data(
             x['active_name'] = '1'
         x['diff'] = diff
 
-    temp_data.sort(key=lambda i: i['temp_id'] == detail_data[0].temp_id, reverse=True)
+    new_data.sort(key=lambda i: i['temp_id'] == detail_data[0].temp_id, reverse=True)
 
     return {
         'now_temp': {
@@ -889,7 +901,7 @@ async def get_sync_api_data(
             'temp_name': detail_data[1].temp_name,
             'source': 'API模板'
         },
-        'old_temp': temp_data
+        'old_temp': new_data
     }
 
 
@@ -901,7 +913,11 @@ async def put_sync_api_data(
         ssd: schemas.SetSyncData,
         db: AsyncSession = Depends(get_db)
 ):
-    detail_data = await crud.get_tempdata_detail(db=db, detail_id=ssd.detail_id)
+    if ssd.api_type == 'API模板':
+        detail_data = await crud.get_tempdata_detail(db=db, detail_id=ssd.detail_id)
+    else:
+        detail_data = await case_crud.get_case_detail(db=db, detail_id=ssd.detail_id)
+
     if not detail_data:
         return await response_code.resp_400(message='没有获取到这个详情数据')
 
@@ -919,10 +935,10 @@ async def put_sync_api_data(
         return await response_code.resp_400(message=f'同步失败, 不存在的key: {e}')
 
     if ssd.data_type == 'params':
-        await crud.save_temp_info(db=db, detail_id=ssd.detail_id, params=rep_data)
+        await crud.save_temp_info(db=db, detail_id=ssd.detail_id, params=rep_data, api_type=ssd.api_type)
     if ssd.data_type == 'data':
-        await crud.save_temp_info(db=db, detail_id=ssd.detail_id, data=rep_data)
+        await crud.save_temp_info(db=db, detail_id=ssd.detail_id, data=rep_data, api_type=ssd.api_type)
     if ssd.data_type == 'headers':
-        await crud.save_temp_info(db=db, detail_id=ssd.detail_id, headers=rep_data)
+        await crud.save_temp_info(db=db, detail_id=ssd.detail_id, headers=rep_data, api_type=ssd.api_type)
 
     return await response_code.resp_200(data=rep_data)

@@ -520,17 +520,17 @@ async def save_temp_info(
         params: dict = None,
         data: dict = None,
         headers: dict = None,
-        json_body: str = None
+        json_body: str = None,
+        api_type: str = ''
 ):
     """
     更新用例的数据
     """
     if detail_id:
-        result = await db.execute(
-            select(models.TemplateData).where(
-                models.TemplateData.id == detail_id
-            )
-        )
+        if api_type == 'API模板':
+            result = await db.execute(select(models.TemplateData).where(models.TemplateData.id == detail_id))
+        else:
+            result = await db.execute(select(case_models.TestCaseData).where(case_models.TestCaseData.id == detail_id))
         db_temp = result.scalars().first()
     else:
         result = await db.execute(
