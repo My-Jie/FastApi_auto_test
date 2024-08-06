@@ -9,7 +9,7 @@
 
 from datetime import datetime
 from pydantic import BaseModel
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Any
 from enum import Enum
 
 
@@ -191,6 +191,7 @@ class TestCaseInfoOut(BaseModel):
     fail: int = None
     mode: str = None
     report: datetime = None
+    result: Optional[dict] = {}
     created_at: datetime = None
     updated_at: datetime = None
 

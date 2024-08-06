@@ -254,6 +254,7 @@ async def case_data_list(
                 "fail": case[0].fail,
                 "mode": case[0].mode,
                 "report": case[3] if case[3] else '1970-01-01 00:00:00',
+                "result": case[4],
                 "created_at": case[0].created_at,
                 "updated_at": case[0].updated_at
             } if outline is False else {
@@ -808,7 +809,7 @@ async def get_jsonpath(case_id: int, jsonpath_name: str = None, db: AsyncSession
 
 @case_service.get(
     '/detail/api/{detail_id}',
-    name='模板api详情',
+    name='用例api详情',
     response_model=schemas.TestCaseDataOut2,
     response_model_exclude_unset=True,
 )

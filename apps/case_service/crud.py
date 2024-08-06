@@ -613,7 +613,8 @@ async def get_case_all_info(
             models.TestCase,
             temp_models.Template.temp_name,
             conf_models.ConfProject.code,
-            outer_sel_subquery.c.created_at
+            outer_sel_subquery.c.created_at,
+            outer_sel_subquery.c.result,
         ).join(
             temp_models.Template,
             models.TestCase.temp_id == temp_models.Template.id,
