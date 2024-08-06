@@ -65,7 +65,8 @@ class GenerateCase:
                     'stop': False,
                     'code': False,
                     'extract': [],
-                    'fail_stop': fail_stop
+                    'fail_stop': fail_stop,
+                    'skip': False
                 }
             }
             temp_id = template.temp_id

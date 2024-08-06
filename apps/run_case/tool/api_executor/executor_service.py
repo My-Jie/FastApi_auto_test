@@ -129,7 +129,7 @@ class ExecutorService(ApiBase):
                     'assert_info': [],  # 校验结果同理
                     'report': {
                         'result': 0,  # 成功0、失败1、跳过2
-                        'is_executor': False,
+                        'is_executor': None,  # True 执行，False 跳过, None 人为终止
                     },
                     'config': case[1].config,
                     'check': case[1].check,
@@ -199,7 +199,8 @@ class ExecutorService(ApiBase):
             }
 
             for api in api_list:
-                if not api['report']['is_executor']:
+                # 如果是none，代表人为终止
+                if api['report']['is_executor'] is None:
                     break
 
                 if api['report']['is_executor']:
@@ -259,7 +260,7 @@ class ExecutorService(ApiBase):
             # 写入详情列表
             await report_crud.create_api_detail(
                 db=self._db,
-                data=[x for x in api_list if x['report']['is_executor']],
+                data=[x for x in api_list if x['report']['is_executor'] is not None],
                 report_id=db_data.id
             )
             # 更新用例次数
@@ -308,7 +309,7 @@ class ExecutorService(ApiBase):
                                     api['request_info']['headers'].get('cookie', '')
                                 )
                             )
-                        )
+                        ) if not api['config'].get('is_login') else ''
                     ),
                     tmp_header=api['request_info']['headers'],
                     case_header=api['history']['headers'],
@@ -331,9 +332,26 @@ class ExecutorService(ApiBase):
                     )
                 api['request_info']['data'] = files_data
 
+            # 跳过用例执行
+            if api['config'].get('skip'):
+                api['response_info'] = [
+                    {
+                        'status_code': 0,
+                        'response_time': 0,
+                        'response': {},
+                        'headers': {},
+                    }
+                ]
+                result = await self._assert(
+                    check=api['check'],
+                    response=api['response_info'][-1]['response'],
+                    skip=True
+                )
+                api['assert_info'].append(result)
+
             # ⬜️================== 🍉轮询发起请求，单接口的默认间隔时间超过5s，每次请求间隔5s进行轮询🍉 ==================⬜️ #
             sleep = api['config']['sleep']
-            while True:
+            while not api['config'].get('skip'):
                 start_time = time.monotonic()
                 res = await sees.request(**api['request_info'], allow_redirects=False)
 
@@ -385,11 +403,12 @@ class ExecutorService(ApiBase):
                 self._cookie[api['api_info']['host']] = await get_cookie(rep_type='aiohttp', response=res)
 
             # 轮询结束后，记录单接口执行结果
-            api['report']['result'] = 1 if [x for x in api['assert_info'][-1] if x['result'] == 1] else 0
-            api['report']['is_executor'] = True
+            # api['report']['result'] = 1 if [x for x in api['assert_info'][-1] if x['result'] == 1] else 0
+            api['report']['result'] = [x['result'] for x in api['assert_info'][-1]][-1]
+            api['report']['is_executor'] = True if not api['config'].get('skip') else False
             logger.info(
                 f"{api['api_info']['case_id']}-({api['api_info']['number']}/{len(api_list) - 1})-"
-                f"{api['request_info']['url']} {dict({0: 'SUCCESS', 1: 'FAIL'}).get(api['report']['result'])}"
+                f"{api['request_info']['url']} {dict({0: 'SUCCESS', 1: 'FAIL', 2: 'SKIP'}).get(api['report']['result'])}"
             )
 
             # 退出循环执行的判断
@@ -423,11 +442,12 @@ class ExecutorService(ApiBase):
         asyncio.create_task(del_status(key_id=key_id))
         await sees.close()
 
-    async def _assert(self, check: dict, response: dict):
+    async def _assert(self, check: dict, response: dict, skip: bool = False):
         """
         校验结果
         :param check:
         :param response:
+        :param skip:
         :return:
         """
         result = []
@@ -453,7 +473,7 @@ class ExecutorService(ApiBase):
                 "actual": value,
                 "compare": v[0] if not isinstance(v, (str, int, float, bool, dict)) else '==',
                 "expect": v[1] if not isinstance(v, (str, int, float, bool, dict)) else v,
-                "result": {True: 1, False: 0}.get(is_fail),
+                "result": 2 if skip else {True: 1, False: 0}.get(is_fail),
             })
 
         return result
@@ -491,6 +511,7 @@ class ExecutorService(ApiBase):
         # 计算成功失败
         success = CASE_STATUS.get(key_id, {}).get('success', 0)
         fail = CASE_STATUS.get(key_id, {}).get('fail', 0)
+        skip = CASE_STATUS.get(key_id, {}).get('skip', 0)
 
         CASE_STATUS[key_id] = {
             'key_id': key_id,
@@ -505,6 +526,10 @@ class ExecutorService(ApiBase):
                 [x for x in api['assert_info'][-1] if x['result'] == 1],
                 retry is False,
             ]) else fail,
+            'skip': skip + 1 if all([
+                [x for x in api['assert_info'][-1] if x['result'] == 2],
+                retry is False,
+            ]) else skip,
             'retry': retry,
             'total': total,
             'stop': stop,
@@ -519,7 +544,7 @@ class ExecutorService(ApiBase):
             'method': api['request_info']['method'],
             'status_code': api['response_info'][-1]['status_code'],
             'run_time': api['response_info'][-1]['response_time'],
-            'is_fail': True if [x for x in api['assert_info'][-1] if x['result'] == 1] else False,
+            'is_fail': {0: False, 1: True, 2: None}.get([x['result'] for x in api['assert_info'][-1]][-1]),
             'is_login': api['config'].get('is_login'),
             'description': api['api_info']['description'],
             'run_status': api['api_info']['run_status'],
